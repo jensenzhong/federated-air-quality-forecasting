@@ -10,6 +10,8 @@ python -m venv .venv
 pip install -e ".[dev]"
 ```
 
+若已安装 uv，优先执行 `uv sync --extra dev --frozen`，由 `uv.lock` 恢复完整传递依赖图。
+
 记录 `pip freeze`、Python、平台、CPU、内存和 Git 提交；运行模块会自动写入 `environment.json`。
 
 ## 2. 数据准备

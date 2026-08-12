@@ -26,6 +26,8 @@ pip install -e ".[dev]"
 Copy-Item .env.example .env
 ```
 
+仓库同时提供 `uv.lock` 作为完整传递依赖锁；推荐复现时使用 `uv sync --extra dev --frozen`。`requirements.lock` 保留为直接依赖的精确约束清单。
+
 设置原始数据目录。原始 CSV 保留在下载目录，不复制到仓库：
 
 ```powershell
