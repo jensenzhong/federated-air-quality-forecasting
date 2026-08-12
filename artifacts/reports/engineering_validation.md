@@ -8,7 +8,7 @@ This file records engineering evidence only. It contains no formal method-perfor
 | Ruff | PASS |
 | Mypy | PASS (38 source files) |
 | Core tests | PASS (51) |
-| Core coverage | 92.81% |
+| Core coverage | 92.67% |
 | Full UCI data test | PASS (12 stations, 420,768 rows) |
 | Prepared cache | PASS (220 files, 1,236,279,706 bytes) |
 | Two-client one-round Flower protocol | PASS (in-memory Grid integration) |

@@ -34,7 +34,7 @@ experiments:
   registry: artifacts/experiment_registry.csv
   verified_engineering_evidence:
     core_test_count: 51
-    core_coverage_percent: 92.81
+    core_coverage_percent: 92.67
     full_data_test: passed
     two_client_one_round_in_memory: passed
     twelve_client_one_round: blocked_by_memory
