@@ -13,6 +13,7 @@ artifacts/runs/*
 !artifacts/runs/.gitkeep
 artifacts/reports/*
 !artifacts/reports/.gitkeep
+!artifacts/reports/engineering_validation.md
 artifacts/figures/*
 !artifacts/figures/.gitkeep
 artifacts/experiment_registry.csv
