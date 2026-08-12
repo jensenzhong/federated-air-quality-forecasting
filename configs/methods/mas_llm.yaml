@@ -1,0 +1,3 @@
+method: mas_llm
+allow_dynamic_budget: true
+strict_llm: true

@@ -1,0 +1,8 @@
+name: smoke-resource-and-correctness
+stage_order: [smoke]
+wall_clock_stop_days: 7
+seeds: [42]
+methods: [persistence, seasonal_naive, fedavg, fedprox, rule_mas]
+rounds: 3
+test_access: prohibited_for_learning_methods
+result_status: TBD

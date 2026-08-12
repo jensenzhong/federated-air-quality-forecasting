@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AQ-MAS-FL planning decision",
+  "type": "object",
+  "required": ["strategy", "lr_scale", "local_epochs", "reason"],
+  "properties": {
+    "strategy": {"enum": ["size_only", "perf_only", "hybrid", "fairness_clip"]},
+    "lr_scale": {"enum": [0.5, 1.0, 1.5]},
+    "local_epochs": {"enum": [1, 2]},
+    "reason": {"type": "string", "minLength": 1},
+    "prompt_hash": {"type": "string"},
+    "source": {"enum": ["llm", "rule", "cache", "fallback"]}
+  },
+  "additionalProperties": false
+}

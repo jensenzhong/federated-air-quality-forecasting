@@ -1,0 +1,52 @@
+version: "0.4.0"
+project:
+  name: AQ-MAS-FL
+  objective: 验证联邦多智能体动态聚合在北京12站点非IID PM2.5短时预测中的精度、公平性与鲁棒性
+  repository: .
+  owner: TBD
+target_venue:
+  name: generic-high-quality-ml-data-mining
+  template: TBD
+  constraints: 暂不绑定会议模板
+stage:
+  current: implementation
+  gate: M3
+  status: in_progress
+artifacts:
+  data_manifest: data/manifest.json
+  runs: artifacts/runs
+  reports: artifacts/reports
+  figures: artifacts/figures
+  protocol: docs/03_experiment_protocol.md
+claims:
+  central:
+    text: MAS-LLM相对计算预算匹配FedProx改善站点宏平均MAE且不损害公平性和鲁棒性
+    status: untested
+    required_evidence: M6主实验、配对分层Bootstrap、公平性非劣与压力实验
+  privacy:
+    text: 训练通信不传输原始数据行；不主张差分隐私或密码学安全
+    status: scoped
+experiments:
+  protocol_status: draft_pre_freeze
+  primary_metric: station_macro_mae
+  seeds: [42, 123, 456, 789, 2024]
+  formal_results: TBD
+  registry: artifacts/experiment_registry.csv
+  verified_engineering_evidence:
+    core_test_count: 51
+    core_coverage_percent: 92.81
+    full_data_test: passed
+    two_client_one_round_in_memory: passed
+    twelve_client_one_round: blocked_by_memory
+reviews:
+  internal_method_review: pending
+  integrity_audit: pending
+revision_ledger:
+  - date: 2026-08-13
+    change: 从旧高速公路静态表格任务迁移到北京12站点时序联邦任务
+    reason: 新数据集和论文验证目标
+submission_checks:
+  template: pending
+  anonymity: pending
+  page_limit: pending
+  artifact_reproducibility: pending

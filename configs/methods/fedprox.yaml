@@ -1,0 +1,4 @@
+method: fedprox
+proximal_mu: 0.01
+search:
+  proximal_mu: [0.001, 0.01, 0.1]

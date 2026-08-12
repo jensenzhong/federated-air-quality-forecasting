@@ -1,0 +1,87 @@
+project:
+  name: AQ-MAS-FL
+  seed: 42
+  output_dir: artifacts/runs
+
+data:
+  root_env: BEIJING_AQ_DATA_DIR
+  file_glob: PRSA_Data_*.csv
+  expected_files: 12
+  expected_rows_per_station: 35064
+  expected_total_rows: 420768
+  expected_start: "2013-03-01 00:00:00"
+  expected_end: "2017-02-28 23:00:00"
+  window: 24
+  horizon: 1
+  stride: 1
+  max_forward_fill_hours: 6
+  cache_dir: data/cache
+  train:
+    start: "2013-03-01 00:00:00"
+    end: "2015-12-18 23:00:00"
+  val:
+    start: "2015-12-19 00:00:00"
+    end: "2016-07-24 23:00:00"
+  test:
+    start: "2016-07-25 00:00:00"
+    end: "2017-02-28 23:00:00"
+
+model:
+  name: gru
+  input_dim: 31
+  hidden_size: 64
+  num_layers: 2
+  dropout: 0.1
+  head_hidden_size: 32
+
+training:
+  batch_size: 128
+  learning_rate: 0.001
+  local_epochs: 1
+  centralized_epochs: 30
+  weight_decay: 0.0001
+  patience: 5
+
+federated:
+  num_clients: 12
+  num_rounds: 30
+  fraction_train: 1.0
+  fraction_evaluate: 1.0
+  accept_failures: false
+  fedprox_mu: 0.01
+  qfedavg_q: 1.0
+  fedadam_server_lr: 0.1
+  weight_bounds: [0.04, 0.16]
+
+llm:
+  provider: deepseek
+  model: deepseek-chat
+  base_url: https://api.deepseek.com
+  api_key_env: DEEPSEEK_API_KEY
+  temperature: 0.0
+  call_every_n_rounds: 2
+  cache_dir: artifacts/llm_cache
+  strict_formal_runs: true
+
+resources:
+  min_logical_cpus: 13
+  min_available_memory_gb: 10
+  threads_per_client: 1
+
+evaluation:
+  primary_metric: macro_mae
+  pollution_quantile: 0.90
+  bootstrap_resamples: 10000
+  noninferiority_margin: 0.02
+  seeds: [42, 123, 456, 789, 2024]
+
+robustness:
+  client_dropout:
+    drop_count: 3
+  missing_blocks:
+    fraction: 0.10
+    block_hours: 6
+  sensor_drift:
+    start_round: 16
+    factor: 1.10
+    client_indices: [0, 3, 6, 9]

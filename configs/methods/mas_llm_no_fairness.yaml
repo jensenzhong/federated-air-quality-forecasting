@@ -1,0 +1,4 @@
+method: mas_llm_no_fairness
+description: LLM-MAS without station fairness observations
+include_fairness_observations: false
+result_status: TBD

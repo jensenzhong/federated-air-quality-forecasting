@@ -1,0 +1,4 @@
+method: fedadam
+server_lr: 0.1
+search:
+  server_lr: [0.01, 0.1, 1.0]

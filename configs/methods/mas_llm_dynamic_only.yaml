@@ -1,0 +1,5 @@
+method: mas_llm_dynamic_only
+description: LLM selects aggregation while learning rate and local epochs remain fixed
+lr_scale: 1.0
+local_epochs: 1
+result_status: TBD

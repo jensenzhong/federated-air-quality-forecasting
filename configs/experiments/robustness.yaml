@@ -1,0 +1,17 @@
+name: preregistered-robustness
+methods: [fedprox, rule_mas, mas_llm]
+pilot_seeds: [42]
+formal_seeds: [42, 123, 456]
+scenarios:
+  client_dropout:
+    drop_count: 3
+    num_clients: 12
+  missing_blocks:
+    fraction: 0.10
+    block_hours: 6
+  sensor_drift:
+    start_round: 16
+    factor: 1.10
+    sorted_client_indices: [0, 3, 6, 9]
+test_strength_tuning: prohibited
+result_status: TBD

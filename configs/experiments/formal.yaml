@@ -1,0 +1,40 @@
+name: formal-main-comparison
+stage_order: [smoke, screening, single_seed_full, formal_five_seed, ablation, robustness]
+wall_clock_stop_days: 7
+seeds: [42, 123, 456, 789, 2024]
+methods:
+  - persistence
+  - seasonal_naive
+  - local_gru
+  - centralized_gru
+  - fedavg
+  - fedprox
+  - qfedavg
+  - fedadam
+  - rule_mas
+  - mas_llm
+  - fedprox_budget_matched
+robustness:
+  - client_dropout_3_of_12
+  - missing_blocks_10pct_6h
+  - sensor_drift_10pct
+result_status: TBD
+protocol:
+  data_manifest_sha256: TBD_AFTER_PROTOCOL_FREEZE
+  git_commit: TBD_AFTER_PROTOCOL_FREEZE
+  config_sha256: TBD_AFTER_PROTOCOL_FREEZE
+  primary_comparison: mas_llm_vs_fedprox_budget_matched
+  bootstrap_resamples: 10000
+  block_hours: 24
+  noninferiority_margin: 0.02
+ablations:
+  - mas_llm_dynamic_only
+  - mas_llm_no_fairness
+  - mlp
+screening:
+  model:
+    hidden_size: [32, 64]
+    learning_rate: [0.0005, 0.001]
+  fedprox_mu: [0.001, 0.01, 0.1]
+  qfedavg_q: [0.1, 1.0, 5.0]
+  fedadam_server_lr: [0.01, 0.1, 1.0]
