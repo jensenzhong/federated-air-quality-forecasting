@@ -7,7 +7,7 @@
 | M0 安全归档 | 部分完成 | 85 文件归档总清单；9 文件删除清单；扫描 0 命中 | 用户在服务商控制台撤销旧密钥 |
 | M1 项目初始化 | 门禁通过 | 可安装包；ruff/mypy 通过；51 项测试通过；核心覆盖率 92.81%；Git 提交 `adfb408` | 无 |
 | M2 数据完成 | 门禁通过 | 12 站/420,768 行 manifest；220 个缓存文件；质量报告；全数据测试通过 | 无 |
-| M3 模型完成 | 进行中 | GRU、MLP、Naive、Local、Centralized；Persistence 验证集 smoke 已 validated | 完成小网格、Local/Centralized smoke 与架构冻结 |
+| M3 模型完成 | 进行中 | GRU、MLP、Naive、Local、Centralized；Persistence 验证集 smoke 已运行并按报告门禁标记 invalid | 完成小网格、Local/Centralized smoke 与架构冻结 |
 | M4 Flower 完成 | 资源阻塞 | ServerApp/ClientApp；固定策略；2 客户端一轮内存集成通过 | 可用内存≥10GB 后执行真实 12 客户端全并发一轮 |
 | M5 MAS 完成 | 进行中 | Rule、LLM、JSON Schema、缓存、回退、动态聚合、预算回放；单测通过 | 完成真实 Flower 决策回放门禁 |
 | M6 正式实验 | 未开始 | 冻结候选协议和队列 | 资源门禁、协议冻结、所有真实运行验证 |

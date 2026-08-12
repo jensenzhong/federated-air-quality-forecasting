@@ -15,5 +15,6 @@ This file records engineering evidence only. It contains no formal method-perfor
 | Plaintext `sk-*` scan | PASS (0 hits in tracked text/config/code/docs) |
 | Legacy deletion verification | PASS (0/9 targets remain) |
 | 12-client full-concurrency resource gate | BLOCKED: 16 logical CPUs, approximately 1.33 GB available RAM; 10 GB required |
+| Validation-only Persistence smoke | Executed, then marked `invalid` for formal reporting because protocol was not frozen and split was not test |
 
 Formal 12-client execution, model selection, five-seed comparisons, ablations, robustness and statistical claims remain `TBD`.
