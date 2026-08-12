@@ -15,6 +15,10 @@ artifacts/reports/*
 !artifacts/reports/.gitkeep
 artifacts/figures/*
 !artifacts/figures/.gitkeep
+artifacts/experiment_registry.csv
+artifacts/queue_*.json
+artifacts/flower_runtime/
+artifacts/llm_cache/
 *.pt
 *.pth
 *.parquet
