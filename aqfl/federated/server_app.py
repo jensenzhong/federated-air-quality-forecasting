@@ -175,6 +175,7 @@ def main(grid: Grid, context: Context) -> None:
             "num_rounds": int(context.run_config["num-server-rounds"]),
             "checkpoint_selection": "validation_macro_mae",
             "evaluation_split": evaluation_split,
+            "protocol_frozen": bool(context.run_config.get("protocol-frozen", False)),
             "best_round": strategy.best_round,
             "best_validation_macro_mae": strategy.best_macro_mae,
             "final_validation": round_rows[-1] if round_rows else {},

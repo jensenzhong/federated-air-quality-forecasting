@@ -26,6 +26,7 @@ def test_training_metric_aggregation() -> None:
     assert result["train_loss"] == 1.25
     assert result["val_macro_mae"] == 3
     assert result["num-clients"] == 2
+    assert result["total-upload-bytes"] == 0
 
 
 def test_evaluation_metric_aggregation() -> None:

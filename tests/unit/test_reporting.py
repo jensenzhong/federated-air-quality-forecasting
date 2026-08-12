@@ -17,7 +17,10 @@ def test_artifact_validator(tmp_path) -> None:
     for name in REQUIRED_ARTIFACTS:
         path = tmp_path / name
         path.mkdir() if name == "predictions" else path.touch()
-    (tmp_path / "summary.json").write_text(json.dumps({"status": "completed"}), encoding="utf-8")
+    (tmp_path / "summary.json").write_text(
+        json.dumps({"status": "completed", "evaluation_split": "test", "protocol_frozen": True}),
+        encoding="utf-8",
+    )
     assert "invalid_manifest_or_environment_json" in validate_artifact_directory(tmp_path)
 
 
@@ -68,7 +71,11 @@ def test_run_artifacts_are_complete_and_immutable(tmp_path) -> None:
     artifacts = RunArtifacts(config, "test", 42)
     artifacts.save_predictions("a", "test", [1], [2.0], [3.0])
     model = torch.nn.Linear(1, 1)
-    artifacts.finalize(model, {"macro_mae": 1.0}, round_metrics=[{"round": 1}])
+    artifacts.finalize(
+        model,
+        {"macro_mae": 1.0, "evaluation_split": "test", "protocol_frozen": True},
+        round_metrics=[{"round": 1}],
+    )
     assert validate_artifact_directory(artifacts.path) == []
     summary = json.loads((artifacts.path / "summary.json").read_text(encoding="utf-8"))
     assert summary["status"] == "completed"

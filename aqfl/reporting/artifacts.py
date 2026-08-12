@@ -168,6 +168,10 @@ def validate_artifact_directory(path: Path) -> list[str]:
                 errors.append("invalid_status")
             if summary.get("status") == "invalid":
                 errors.append("run_marked_invalid")
+            if summary.get("evaluation_split") != "test":
+                errors.append("not_test_evaluation")
+            if not summary.get("protocol_frozen", False):
+                errors.append("protocol_not_frozen")
         except json.JSONDecodeError:
             errors.append("invalid_summary_json")
     manifest_path = path / "dataset_manifest.json"

@@ -139,6 +139,7 @@ def run(
                 config, method, artifacts, evaluation_split
             )
         summary["evaluation_split"] = evaluation_split
+        summary["protocol_frozen"] = protocol_frozen
         artifacts.finalize(model, summary, round_metrics=history)
     except Exception as exc:
         artifacts.invalidate(str(exc))

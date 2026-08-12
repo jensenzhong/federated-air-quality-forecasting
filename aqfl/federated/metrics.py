@@ -24,6 +24,14 @@ def aggregate_training_metrics(records: list[RecordDict], weighted_by_key: str) 
         "update_norm_cv": float(norms.std(ddof=0) / max(norms.mean(), 1e-8)),
         "num-examples": int(counts.sum()),
         "num-clients": len(metrics),
+        "total-upload-bytes": int(
+            sum(
+                array.numpy().nbytes
+                for record in records
+                for array_record in record.array_records.values()
+                for array in array_record.values()
+            )
+        ),
     })
 
 

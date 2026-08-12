@@ -137,17 +137,24 @@ class LLMPlanningAgent:
         current: dict[str, float],
         include_fairness: bool = True,
     ) -> str:
-        fairness_keys = {"worst_station_mae", "station_mae_std", "station_mae_cv"}
+        fairness_tokens = ("worst", "mae_std", "mae_cv", "fairness")
+
+        def allowed(key: str) -> bool:
+            lowered = key.lower()
+            return "test" not in lowered and (
+                include_fairness or not any(token in lowered for token in fairness_tokens)
+            )
+
         safe_current = {
             key: value
             for key, value in current.items()
-            if "test" not in key.lower() and (include_fairness or key not in fairness_keys)
+            if allowed(key)
         }
         safe_history = [
             {
                 key: value
                 for key, value in record.items()
-                if "test" not in key.lower() and (include_fairness or key not in fairness_keys)
+                if allowed(key)
             }
             for record in history[-10:]
         ]

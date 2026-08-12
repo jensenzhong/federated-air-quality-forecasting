@@ -59,13 +59,14 @@ def test_llm_forced_exploration_and_prompt_firewall(tmp_path) -> None:
     prompt = agent.build_prompt(
         5,
         [{"macro_mae": 2, "test_mae": 999, "station_mae_cv": 0.2}],
-        {"macro_mae": 1, "test_rmse": 999, "worst_station_mae": 3},
+        {"macro_mae": 1, "test_rmse": 999, "worst_station_mae": 3, "val_worst_mae": 3},
         include_fairness=False,
     )
     assert "test_mae" not in prompt
     assert "test_rmse" not in prompt
     assert "station_mae_cv" not in prompt
     assert "worst_station_mae" not in prompt
+    assert "val_worst_mae" not in prompt
 
 
 def test_llm_cache_replay_without_api(tmp_path) -> None:
