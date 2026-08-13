@@ -5,7 +5,7 @@
 | 里程碑 | 状态 | 已有证据 | 剩余门禁 |
 |---|---|---|---|
 | M0 安全归档 | 部分完成 | 85 文件归档总清单；9 文件删除清单；扫描 0 命中 | 用户在服务商控制台撤销旧密钥 |
-| M1 项目初始化 | 门禁通过 | 可安装包；ruff/mypy 通过；51 项测试通过；核心覆盖率 92.67%；Git 提交 `f4bd65c` | 无 |
+| M1 项目初始化 | 门禁通过 | `uv sync --extra dev --frozen` 干净安装通过；ruff/mypy 通过；51 项测试通过；核心覆盖率 92.67%；Git 提交 `298ea98` | 无 |
 | M2 数据完成 | 门禁通过 | 12 站/420,768 行 manifest；220 个缓存文件；质量报告；全数据测试通过 | 无 |
 | M3 模型完成 | 进行中 | GRU、MLP、Naive、Local、Centralized；Persistence 验证集 smoke 已运行并按报告门禁标记 invalid | 完成小网格、Local/Centralized smoke 与架构冻结 |
 | M4 Flower 完成 | 资源阻塞 | ServerApp/ClientApp；固定策略；2 客户端一轮内存集成通过 | 可用内存≥10GB 后执行真实 12 客户端全并发一轮 |

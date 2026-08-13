@@ -4,7 +4,7 @@ This file records engineering evidence only. It contains no formal method-perfor
 
 | Check | Result |
 |---|---|
-| Editable installation | PASS |
+| Isolated installation | PASS (`uv sync --extra dev --frozen`; PyTorch 2.7.0+cpu, Flower 1.22.0, pandas 2.2.3) |
 | Ruff | PASS |
 | Mypy | PASS (38 source files) |
 | Core tests | PASS (51) |
