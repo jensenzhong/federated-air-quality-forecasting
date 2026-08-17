@@ -1,0 +1,14 @@
+title,year,source,status,relevance,url
+Federated Hyperparameter Tuning Challenges Baselines and Connections to Weight-Sharing,2021,OpenReview,conference,"federated lr epoch and proximal tuning; direct novelty threat",https://openreview.net/forum?id=p99rWde9fVJ
+FedMarl A Multi-Agent Reinforcement Learning Approach for Efficient Client Selection in Federated Learning,2022,AAAI,peer-reviewed,"MAS client selection and resource objectives",https://ojs.aaai.org/index.php/AAAI/article/view/20894
+Federated Learning under Distributed Concept Drift,2023,AISTATS,peer-reviewed,"staggered spatial and temporal client drift",https://proceedings.mlr.press/v206/jothimurugesan23a.html
+Flash Concept Drift Adaptation in Federated Learning,2023,ICML,peer-reviewed,"drift detection from update magnitude and adaptive optimization",https://proceedings.mlr.press/v202/panchal23a.html
+Adaptive Federated Learning with Auto-Tuned Clients,2024,ICLR,peer-reviewed,"client-specific adaptive step sizes",https://proceedings.iclr.cc/paper_files/paper/2024/hash/d850b7e0cdc7f1c0820c6ad85405ae94-Abstract-Conference.html
+Pursuing Overall Welfare in Federated Learning through Sequential Decision Making,2024,ICML,peer-reviewed,"fair adaptive aggregation as online convex optimization",https://proceedings.mlr.press/v235/hahn24a.html
+FedCompass Efficient Cross-Silo Federated Learning on Heterogeneous Client Devices Using a Computing Power Aware Scheduler,2024,ICLR,peer-reviewed,"dynamic local workloads",https://openreview.net/forum?id=msXxrttLOi
+Tackling Data Heterogeneity in Federated Time Series Forecasting,2024,arXiv,preprint,"time-series update trajectories",https://arxiv.org/abs/2411.15716
+On the Power of Adaptive Weighted Aggregation in Heterogeneous Federated Learning and Beyond,2025,AISTATS,peer-reviewed,"client consensus dynamics and adaptive weights",https://proceedings.mlr.press/v258/zeng25b.html
+FedAWA Adaptive Optimization of Aggregation Weights in Federated Learning Using Client Vectors,2025,CVPR,peer-reviewed,"update-vector adaptive weights",https://openaccess.thecvf.com/content/CVPR2025/html/Shi_FedAWA_Adaptive_Optimization_of_Aggregation_Weights_in_Federated_Learning_Using_CVPR_2025_paper.html
+Benchmarking Catastrophic Forgetting Mitigation Methods in Federated Time Series Forecasting,2025,FLTA/arXiv,accepted,"same Beijing 12-client time-series dataset",https://arxiv.org/abs/2510.21491
+Agentic Federated Learning The Future of Distributed Training Orchestration,2026,arXiv,preprint,"LM-agent orchestration roadmap and closest conceptual prior",https://arxiv.org/abs/2604.04895
+Selective Collaboration for Robust Federated Learning,2026,PMLR,peer-reviewed,"dynamic beneficial collaborator weighting",https://proceedings.mlr.press/v328/tupitsa26a.html
