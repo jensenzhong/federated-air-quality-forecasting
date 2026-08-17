@@ -41,6 +41,7 @@ experiments:
     secagg_quantization_test: passed_twelve_client_four_stage_hard_error_bound
     strict_cohort_drop_test: passed_collect_stage_fail_closed
     replay_and_identity_gates: passed
+    p1_runner_preflight: passed_twelve_station_no_training
     formal_test_status: blocked_until_secure_evaluation_and_isolated_clients
     multiseed_v1: paused
   registry: artifacts/experiment_registry.csv
@@ -191,11 +192,11 @@ experiments:
       - three_round_resource_benchmark
   verified_engineering_evidence:
     verification_date: 2026-08-18
-    core_test_count: 105
+    core_test_count: 108
     skipped_test_count: 1
     skipped_test_reason: BEIJING_AQ_DATA_DIR_not_configured
     ruff: passed
-    mypy: passed_50_source_files
+    mypy: passed_51_source_entrypoints
     git_diff_check: passed
     core_coverage_percent: 91.30
     full_data_test: passed

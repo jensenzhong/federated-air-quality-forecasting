@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- 为低内存顺序 runner 增加 `--preflight-only`：在调用 ServerApp 或开始客户端训练前验证站点数量、PAFA split、同进程 nonformal 边界、SecAgg+ 数值容量、最小群组、本地 LLM 端点与资源门禁，并只输出去标识化 JSON。
+- 补充与 `pyproject.toml` 既有 MIT 声明一致的 `LICENSE`；当前全量验证为 `108 passed, 1 skipped`，ruff、mypy（51 个源码入口）和 `git diff --check` 通过。
+
 ## 0.3.0 - 2026-08-18
 
 - 将 PAFA SecAgg+ 数值语义明确为：Flower 对客户端返回的加权完整模型参数逐坐标裁剪、量化和加掩码；该过程不是更新差分的 L2 裁剪，也不提供 DP 保证。

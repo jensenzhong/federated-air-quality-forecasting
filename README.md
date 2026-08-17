@@ -83,10 +83,11 @@ flwr run . local-12 --run-config "method=fedprox seed=42"
 低内存可行性入口会保持12站全部参与并逐客户端执行：
 
 ```powershell
+python scripts/run_flower_sequential.py --method pafa_rule --rounds 1 --preflight-only
 python scripts/run_flower_sequential.py --method fedprox --rounds 1 --seed 42
 ```
 
-该入口直接调用真实 Flower `ClientApp`/`Strict Strategy`，但当前仍属于验证集工程 smoke；正式资格见 `docs/03_experiment_protocol.md` 的顺序运行时等价门禁。`scripts/run_sim.py` 保留为早期资源可行性对照。
+`--preflight-only` 会在调用 ServerApp 或启动客户端训练前退出，并输出不含站点名称的资格报告。实际运行入口直接调用真实 Flower `ClientApp`/`Strict Strategy`，但当前仍属于验证集工程 smoke；正式资格见 `docs/03_experiment_protocol.md` 的顺序运行时等价门禁。`scripts/run_sim.py` 保留为早期资源可行性对照。
 
 实验队列与结果审计：
 
