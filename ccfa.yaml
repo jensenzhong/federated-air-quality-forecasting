@@ -37,6 +37,8 @@ experiments:
     design: docs/10_llm_mas_v2_research_redesign.md
     goal_roadmap: docs/12_goal_driven_mas_fl_roadmap.md
     continual_benchmark_note: docs/benchmark-2510.21491_catastrophic_forgetting.md
+    continual_source_audit: docs/benchmark-source-audit-2510.21491.md
+    continual_schedule: aqfl/data/continual_schedule.py
     old_seed42_test_role: development_audit_only
     next_gate: P1_twelve_station_privacy_smoke
     secagg_synthetic_test: passed_three_client_four_stage
@@ -47,6 +49,8 @@ experiments:
     cohort_directive_round_binding: passed
     proposer_directive_consumption: passed_rule_bandit_llm_schema
     cohort_summary_probe_calibration_fields: implemented
+    continual_af_ap_avgperf_codec: implemented_aggregate_only
+    continual_task_schedule: frozen_source_audit_pending_clientapp_adapter
     p1_runner_preflight: passed_twelve_station_no_training
     formal_test_status: blocked_until_secure_evaluation_and_isolated_clients
     multiseed_v1: paused
