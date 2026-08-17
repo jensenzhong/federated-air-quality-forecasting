@@ -23,7 +23,7 @@ from aqfl.agents.local_runtime import (
     record_local_outcome,
     save_private_agent_state,
 )
-from aqfl.agents.v2_contracts import ProbeOutcome
+from aqfl.agents.v2_contracts import CohortDirective, ProbeOutcome
 from aqfl.config import load_config, set_seed
 from aqfl.data.dataset import list_stations, load_cache_metadata, load_station_dataset
 from aqfl.data.preprocessing import GlobalScalerState
@@ -159,6 +159,8 @@ def train(msg: Message, context: Context) -> Message:
     if secure_pafa:
         agentic = config["agentic_v2"]
         round_number = int(train_config["server-round"])
+        directive = CohortDirective.from_json(str(train_config["cohort-directive"]))
+        directive.validate_for_round(round_number)
         private_state = load_private_agent_state(
             context, int(agentic["memory_records_per_client"])
         )
@@ -168,6 +170,7 @@ def train(msg: Message, context: Context) -> Message:
             config,
             private_state,
             strict_llm=bool(train_config.get("strict-llm", True)),
+            directive=directive,
         )
         probe_enabled = bool(train_config.get("probe-enabled", True))
         outcomes: tuple[ProbeOutcome, ...] = ()
@@ -203,7 +206,7 @@ def train(msg: Message, context: Context) -> Message:
         )
         execution = apply_cohort_lr_cap(
             execution,
-            float(train_config.get("cohort-lr-scale-cap", 1.0)),
+            directive.lr_scale_cap,
         )
         selected = execution.selected_action
         learning_rate = base_lr * selected.lr_scale
@@ -281,6 +284,7 @@ def train(msg: Message, context: Context) -> Message:
             clipping_violation=clipping_violation,
             proposal=proposal,
             execution=execution,
+            directive=directive,
         )
         arrays = ArrayRecord(model.state_dict())
         arrays[COHORT_SUMMARY_ARRAY] = Array(summary_vector)

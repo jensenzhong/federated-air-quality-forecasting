@@ -10,7 +10,7 @@ from collections import OrderedDict
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 from flwr.app import ArrayRecord, ConfigRecord, Context, Message, MetricRecord, RecordDict
@@ -40,7 +40,13 @@ from flwr.server.workflow.constant import (
 )
 from flwr.serverapp import Grid
 
-from aqfl.agents.v2_contracts import ActionProposal, ExecutionDecision
+from aqfl.agents.v2_contracts import (
+    ActionProposal,
+    CohortDirective,
+    DirectivePhase,
+    DirectivePriority,
+    ExecutionDecision,
+)
 
 COHORT_SUMMARY_ARRAY = "__pafa_cohort_summary__"
 SECAGG_COLLECT_GUARD = "__pafa_secagg_collect_guard__"
@@ -122,7 +128,7 @@ class StrictCohortGrid(Grid):
 class CohortSummaryCodec:
     """Encode private client metrics into one fixed, SecAgg+-summed vector."""
 
-    continuous_size = 11
+    continuous_size = 16
     size = continuous_size + len(ACTION_IDS) + len(DIAGNOSES) + len(SOURCES) + len(GATES)
 
     @classmethod
@@ -142,8 +148,34 @@ class CohortSummaryCodec:
         clipping_violation: bool,
         proposal: ActionProposal,
         execution: ExecutionDecision,
+        directive: CohortDirective | None = None,
     ) -> np.ndarray:
         values = np.zeros(cls.size, dtype=np.float32)
+        probe_gains = np.asarray(
+            [outcome.estimated_gain for outcome in execution.probe_outcomes],
+            dtype=np.float64,
+        )
+        probe_mean = float(np.mean(probe_gains)) if probe_gains.size else 0.0
+        probe_std = float(np.std(probe_gains)) if probe_gains.size else 0.0
+        active_directive = directive or CohortDirective(
+            phase="initial",
+            priority="accuracy",
+            lr_scale_cap=1.5,
+            allow_adapt_fast=True,
+            allow_tail_focus=True,
+            directive_round=0,
+        )
+        directive_compliant = (
+            execution.selected_action.lr_scale <= active_directive.lr_scale_cap
+            and (active_directive.allow_adapt_fast or execution.selected_action.action_id != "adapt_fast")
+            and (active_directive.allow_tail_focus or execution.selected_action.action_id != "tail_focus")
+        )
+        priority_aligned = {
+            "accuracy": execution.selected_action.aggregation_gate == "normal",
+            "tail_recovery": execution.selected_action.aggregation_gate == "protect_tail",
+            "conflict_recovery": execution.selected_action.aggregation_gate == "downweight_conflict",
+            "efficiency": execution.selected_action.action_id == "safe_default",
+        }[active_directive.priority]
         values[: cls.continuous_size] = np.asarray(
             [
                 np.clip(train_loss / 5.0, 0.0, 1.0),
@@ -157,6 +189,11 @@ class CohortSummaryCodec:
                 float(execution.accepted),
                 np.clip(contribution_scale / 1.25, 0.0, 1.0),
                 float(clipping_violation),
+                np.clip((probe_mean + 5.0) / 10.0, 0.0, 1.0),
+                np.clip(probe_std / 5.0, 0.0, 1.0),
+                float(directive_compliant),
+                float(proposal.diagnosis == "tail_risk"),
+                float(priority_aligned),
             ],
             dtype=np.float32,
         )
@@ -200,6 +237,11 @@ class CohortSummaryCodec:
             "cohort_action_acceptance_rate": float(array[8]),
             "cohort_contribution_scale": float(array[9] * 1.25),
             "cohort_clipping_violation_rate": float(array[10]),
+            "cohort_probe_gain_mean": float(array[11] * 10.0 - 5.0),
+            "cohort_probe_gain_std": float(array[12] * 5.0),
+            "cohort_directive_compliance_rate": float(array[13]),
+            "cohort_tail_risk_rate": float(array[14]),
+            "cohort_priority_alignment_rate": float(array[15]),
         }
         offset = cls.continuous_size
         for name in ACTION_IDS:
@@ -377,6 +419,14 @@ class AggregateCoordinatorAgent:
             "cohort-lr-scale-cap": 1.0,
             "cohort-round": 0,
         }
+        self.directive = CohortDirective(
+            phase="initial",
+            priority="accuracy",
+            lr_scale_cap=1.0,
+            allow_adapt_fast=True,
+            allow_tail_focus=True,
+            directive_round=0,
+        )
 
     def observe(
         self,
@@ -398,12 +448,33 @@ class AggregateCoordinatorAgent:
         relative_change = (current - previous) / max(previous, 1e-8)
         drift_rate = float(summary.get("diagnosis_rate_drift", 0.0))
         conflict_rate = float(summary.get("diagnosis_rate_conflict", 0.0))
-        if relative_change > 0.01 or drift_rate + conflict_rate > 0.35:
+        probe_gain = float(summary.get("cohort_probe_gain_mean", 0.0))
+        compliance = float(summary.get("cohort_directive_compliance_rate", 1.0))
+        if (
+            relative_change > 0.01
+            or drift_rate + conflict_rate > 0.35
+            or probe_gain < -0.25
+            or compliance < 0.8
+        ):
             phase, cap = "volatile", 0.5
+            priority = "conflict_recovery" if conflict_rate >= drift_rate else "tail_recovery"
+            allow_fast, allow_tail = False, True
         elif abs(relative_change) <= 0.002 and round_number > 1:
             phase, cap = "stagnating", 1.0
+            priority = "efficiency"
+            allow_fast, allow_tail = False, True
         else:
             phase, cap = "improving", 1.5
+            priority = "accuracy"
+            allow_fast, allow_tail = True, False
+        self.directive = CohortDirective(
+            phase=cast(DirectivePhase, phase),
+            priority=cast(DirectivePriority, priority),
+            lr_scale_cap=cap,
+            allow_adapt_fast=allow_fast,
+            allow_tail_focus=allow_tail,
+            directive_round=round_number,
+        )
         self.signal = {
             "cohort-phase": phase,
             "cohort-lr-scale-cap": cap,
@@ -415,6 +486,7 @@ class AggregateCoordinatorAgent:
             "cohort_size": cohort_size,
             "summary": summary,
             "signal": dict(self.signal),
+            "directive": self.directive.to_dict(),
         }
         self.history.append(event)
         return dict(self.signal)
@@ -525,6 +597,7 @@ def run_secure_pafa(
             "server-round": round_number,
             "strict-llm": strict_llm,
             "probe-enabled": probe_enabled,
+            "cohort-directive": coordinator.directive.to_json(),
             **coordinator.signal,
         }
 

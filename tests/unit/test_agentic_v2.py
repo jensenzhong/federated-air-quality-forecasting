@@ -36,6 +36,7 @@ from aqfl.agents.v2_contracts import (
     ActionProposal,
     ClientAction,
     ClientStateCapsule,
+    CohortDirective,
     CreditRecord,
     ProbeOutcome,
 )
@@ -327,6 +328,50 @@ def test_aggregate_coordinator_enforces_minimum_cohort() -> None:
         coordinator.observe(1, 9, {"cohort_val_macro_mae": 10.0})
     signal = coordinator.observe(1, 12, {"cohort_val_macro_mae": 10.0})
     assert set(signal) == {"cohort-phase", "cohort-lr-scale-cap", "cohort-round"}
+
+
+def test_cohort_directive_is_round_bound_and_changes_all_local_proposers() -> None:
+    directive = CohortDirective(
+        phase="volatile",
+        priority="conflict_recovery",
+        lr_scale_cap=0.5,
+        allow_adapt_fast=False,
+        allow_tail_focus=False,
+        directive_round=3,
+    )
+    assert CohortDirective.from_json(directive.to_json()) == directive
+    with pytest.raises(RuntimeError, match="round binding"):
+        directive.validate_for_round(3)
+    directive.validate_for_round(4)
+
+    local = capsule("local", mae_slope=-1.0)
+    memory = EpisodicMemory()
+    unconstrained = RuleActionProposer().propose(4, [local], memory)["local"]
+    constrained = RuleActionProposer().propose(4, [local], memory, directive)["local"]
+    assert unconstrained.candidates[0].action_id == "adapt_fast"
+    assert constrained.candidates[0].action_id == "cautious"
+    assert {action.action_id for action in constrained.candidates} <= {
+        "safe_default",
+        "cautious",
+    }
+
+
+def test_coordinator_emits_identity_free_directive_for_next_round() -> None:
+    coordinator = AggregateCoordinatorAgent(2)
+    signal = coordinator.observe(
+        1,
+        2,
+        {
+            "cohort_val_macro_mae": 10.0,
+            "diagnosis_rate_drift": 0.0,
+            "diagnosis_rate_conflict": 0.5,
+        },
+    )
+    directive = coordinator.directive
+    assert signal["cohort-round"] == 1
+    assert directive.directive_round == 1
+    assert directive.priority == "conflict_recovery"
+    assert "client" not in directive.to_json().lower()
 
 
 def test_secagg_reply_sanitizer_removes_client_metadata() -> None:

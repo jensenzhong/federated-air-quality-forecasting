@@ -9,10 +9,19 @@ from typing import Any, Literal
 DiagnosisTag = Literal["stable", "underfit", "overfit", "drift", "conflict", "tail_risk"]
 AggregationGate = Literal["normal", "downweight_conflict", "protect_tail"]
 ProposalSource = Literal["rule", "bandit", "llm", "cache", "fallback"]
+DirectivePhase = Literal["initial", "improving", "stagnating", "volatile"]
+DirectivePriority = Literal["accuracy", "tail_recovery", "conflict_recovery", "efficiency"]
 
 ALLOWED_DIAGNOSES = {"stable", "underfit", "overfit", "drift", "conflict", "tail_risk"}
 ALLOWED_GATES = {"normal", "downweight_conflict", "protect_tail"}
 ALLOWED_PROPOSAL_SOURCES = {"rule", "bandit", "llm", "cache", "fallback"}
+ALLOWED_DIRECTIVE_PHASES = {"initial", "improving", "stagnating", "volatile"}
+ALLOWED_DIRECTIVE_PRIORITIES = {
+    "accuracy",
+    "tail_recovery",
+    "conflict_recovery",
+    "efficiency",
+}
 ALLOWED_LR_SCALES = {0.5, 1.0, 1.5}
 ALLOWED_LOCAL_EPOCHS = {1, 2}
 ALLOWED_PROXIMAL_MU = {0.001, 0.01}
@@ -23,6 +32,78 @@ def _finite(name: str, value: float) -> float:
     if not math.isfinite(number):
         raise ValueError(f"{name} must be finite")
     return number
+
+
+@dataclass(frozen=True)
+class CohortDirective:
+    """Fixed, identity-free public instruction produced from one SecAgg+ aggregate."""
+
+    phase: DirectivePhase
+    priority: DirectivePriority
+    lr_scale_cap: float
+    allow_adapt_fast: bool
+    allow_tail_focus: bool
+    directive_round: int
+
+    def __post_init__(self) -> None:
+        if self.phase not in ALLOWED_DIRECTIVE_PHASES:
+            raise ValueError(f"Invalid directive phase: {self.phase}")
+        if self.priority not in ALLOWED_DIRECTIVE_PRIORITIES:
+            raise ValueError(f"Invalid directive priority: {self.priority}")
+        if float(self.lr_scale_cap) not in {0.5, 1.0, 1.5}:
+            raise ValueError(f"Invalid directive lr_scale_cap: {self.lr_scale_cap}")
+        if not isinstance(self.allow_adapt_fast, bool) or not isinstance(self.allow_tail_focus, bool):
+            raise ValueError("Directive action permissions must be boolean")
+        if self.directive_round < 0:
+            raise ValueError("directive_round must be non-negative")
+
+    def validate_for_round(self, round_number: int) -> None:
+        if round_number < 1 or self.directive_round != round_number - 1:
+            raise RuntimeError(
+                "CohortDirective round binding mismatch: expected previous completed round"
+            )
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+    def to_json(self) -> str:
+        import json
+
+        return json.dumps(self.to_dict(), ensure_ascii=False, separators=(",", ":"), sort_keys=True)
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> CohortDirective:
+        required = {
+            "phase",
+            "priority",
+            "lr_scale_cap",
+            "allow_adapt_fast",
+            "allow_tail_focus",
+            "directive_round",
+        }
+        if set(data) != required:
+            raise ValueError("CohortDirective contains missing or unexpected keys")
+        if not isinstance(data["allow_adapt_fast"], bool) or not isinstance(
+            data["allow_tail_focus"], bool
+        ):
+            raise ValueError("CohortDirective action permissions must be booleans")
+        return cls(
+            phase=str(data["phase"]),  # type: ignore[arg-type]
+            priority=str(data["priority"]),  # type: ignore[arg-type]
+            lr_scale_cap=float(data["lr_scale_cap"]),
+            allow_adapt_fast=data["allow_adapt_fast"],
+            allow_tail_focus=data["allow_tail_focus"],
+            directive_round=int(data["directive_round"]),
+        )
+
+    @classmethod
+    def from_json(cls, raw: str) -> CohortDirective:
+        import json
+
+        value = json.loads(raw)
+        if not isinstance(value, dict):
+            raise ValueError("CohortDirective JSON must encode an object")
+        return cls.from_dict(value)
 
 
 @dataclass(frozen=True)

@@ -17,6 +17,7 @@ from aqfl.agents.action_library import build_action_library
 from aqfl.agents.memory import EpisodicMemory
 from aqfl.agents.v2_contracts import (
     ActionProposal,
+    CohortDirective,
     CreditRecord,
     ExecutionDecision,
 )
@@ -86,6 +87,7 @@ def _build_proposer(
     state: PrivateAgentState,
     *,
     strict_llm: bool,
+    directive: CohortDirective | None = None,
 ) -> ActionProposer:
     if method == "pafa_rule":
         return RuleActionProposer()
@@ -115,6 +117,7 @@ def propose_local_actions(
     state: PrivateAgentState,
     *,
     strict_llm: bool,
+    directive: CohortDirective | None = None,
 ) -> tuple[ActionProposal, ActionProposer]:
     proposer = _build_proposer(method, config, state, strict_llm=strict_llm)
     capsules = list(state.memory.capsules(LOCAL_CLIENT_TOKEN))
@@ -133,7 +136,9 @@ def propose_local_actions(
             train_seconds=0.0,
             local_epochs=0,
         )
-    proposal = proposer.propose(round_number, [capsule], state.memory)[LOCAL_CLIENT_TOKEN]
+    proposal = proposer.propose(
+        round_number, [capsule], state.memory, directive
+    )[LOCAL_CLIENT_TOKEN]
     state.last_proposal = proposal
     return proposal, proposer
 

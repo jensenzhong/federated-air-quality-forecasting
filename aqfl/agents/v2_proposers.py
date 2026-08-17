@@ -17,6 +17,7 @@ from aqfl.agents.memory import EpisodicMemory
 from aqfl.agents.v2_contracts import (
     ActionProposal,
     ClientStateCapsule,
+    CohortDirective,
     CreditRecord,
     DiagnosisTag,
     ProposalSource,
@@ -31,6 +32,7 @@ class ActionProposer(Protocol):
         round_number: int,
         capsules: list[ClientStateCapsule],
         memory: EpisodicMemory,
+        directive: CohortDirective | None = None,
     ) -> dict[str, ActionProposal]: ...
 
     def observe(self, credit: CreditRecord) -> None: ...
@@ -52,12 +54,44 @@ def _diagnose(capsule: ClientStateCapsule, median_mae: float) -> tuple[Diagnosis
     return "stable", ("no drift, conflict, or tail trigger",)
 
 
+def _constrain_action_ids(
+    action_ids: list[str],
+    directive: CohortDirective | None,
+) -> list[str]:
+    if directive is None:
+        return action_ids
+    allowed = set(action_ids)
+    if not directive.allow_adapt_fast:
+        allowed.discard("adapt_fast")
+    if not directive.allow_tail_focus:
+        allowed.discard("tail_focus")
+    allowed.add("safe_default")
+    if directive.priority == "conflict_recovery":
+        allowed.add("cautious")
+    if directive.priority == "tail_recovery" and directive.allow_tail_focus:
+        allowed.add("tail_focus")
+    ordered = [action_id for action_id in action_ids if action_id in allowed]
+    for preferred in ("cautious", "tail_focus"):
+        if preferred in allowed and preferred not in ordered:
+            ordered.append(preferred)
+    if "safe_default" not in ordered:
+        ordered.append("safe_default")
+    if directive.priority == "tail_recovery" and directive.allow_tail_focus:
+        ordered = sorted(ordered, key=lambda item: item != "tail_focus")
+    elif directive.priority == "conflict_recovery":
+        ordered = sorted(ordered, key=lambda item: item != "cautious")
+    elif directive.priority == "efficiency":
+        ordered = sorted(ordered, key=lambda item: item != "safe_default")
+    return ordered[:3]
+
+
 class RuleActionProposer:
     def propose(
         self,
         round_number: int,
         capsules: list[ClientStateCapsule],
         memory: EpisodicMemory,
+        directive: CohortDirective | None = None,
     ) -> dict[str, ActionProposal]:
         del round_number, memory
         median = float(np.median([item.val_mae for item in capsules])) if capsules else 0.0
@@ -76,7 +110,7 @@ class RuleActionProposer:
                 capsule.client_id,
                 diagnosis,
                 evidence,
-                resolve_action_ids(mapping[diagnosis]),
+                resolve_action_ids(_constrain_action_ids(mapping[diagnosis], directive)),
                 "rule",
             )
         return proposals
@@ -130,6 +164,7 @@ class ContextualBanditProposer:
         round_number: int,
         capsules: list[ClientStateCapsule],
         memory: EpisodicMemory,
+        directive: CohortDirective | None = None,
     ) -> dict[str, ActionProposal]:
         del memory
         library = build_action_library()
@@ -139,7 +174,8 @@ class ContextualBanditProposer:
         proposals = {}
         for capsule in capsules:
             scored: list[tuple[float, str]] = []
-            for action_id in sorted(library):
+            candidate_ids = _constrain_action_ids(sorted(library), directive)
+            for action_id in candidate_ids:
                 vector = _feature(capsule, action_id)
                 score = float(theta @ vector + self.alpha * np.sqrt(vector @ inverse @ vector))
                 scored.append((score, action_id))
@@ -173,6 +209,7 @@ class ProbeOracleProposer:
         round_number: int,
         capsules: list[ClientStateCapsule],
         memory: EpisodicMemory,
+        directive: CohortDirective | None = None,
     ) -> dict[str, ActionProposal]:
         del round_number, memory
         return {
@@ -180,7 +217,9 @@ class ProbeOracleProposer:
                 capsule.client_id,
                 "stable",
                 ("mechanism upper bound exposes all three non-fallback interventions",),
-                resolve_action_ids(["cautious", "adapt_fast", "tail_focus"]),
+                resolve_action_ids(
+                    _constrain_action_ids(["cautious", "adapt_fast", "tail_focus"], directive)
+                ),
                 "rule",
             )
             for capsule in capsules
@@ -212,6 +251,7 @@ class LLMActionProposer:
         round_number: int,
         capsules: list[ClientStateCapsule],
         memory: EpisodicMemory,
+        directive: CohortDirective | None = None,
     ) -> str:
         clients = []
         for capsule in capsules:
@@ -226,6 +266,7 @@ class LLMActionProposer:
             )
         payload = {
             "round": round_number,
+            "cohort_directive": directive.to_dict() if directive is not None else None,
             "clients": clients,
             "action_library": {
                 key: value.to_dict() for key, value in build_action_library().items()
@@ -246,10 +287,11 @@ class LLMActionProposer:
         round_number: int,
         capsules: list[ClientStateCapsule],
         memory: EpisodicMemory,
+        directive: CohortDirective | None = None,
     ) -> dict[str, ActionProposal]:
         interval = int(self.config.get("call_every_n_rounds", 2))
         if self.last_proposals is not None and (round_number - 1) % interval != 0:
-            return {
+            reused = {
                 client_id: ActionProposal(
                     proposal.client_id,
                     proposal.diagnosis,
@@ -260,7 +302,8 @@ class LLMActionProposer:
                 )
                 for client_id, proposal in self.last_proposals.items()
             }
-        prompt = self.build_prompt(round_number, capsules, memory)
+            return self._apply_directive(reused, directive)
+        prompt = self.build_prompt(round_number, capsules, memory, directive)
         prompt_hash = hashlib.sha256(prompt.encode("utf-8")).hexdigest()
         cache_path = (
             self.cache_dir / f"pafa-{prompt_hash}.json" if self.cache_dir is not None else None
@@ -268,12 +311,14 @@ class LLMActionProposer:
         if cache_path is not None and cache_path.is_file():
             data = json.loads(cache_path.read_text(encoding="utf-8"))["response"]
             proposals = self._parse(data, capsules, "cache", prompt_hash)
+            proposals = self._apply_directive(proposals, directive)
             self.last_proposals = proposals
             return proposals
         try:
             raw = self._call(prompt)
             data = json.loads(raw)
             proposals = self._parse(data, capsules, "llm", prompt_hash)
+            proposals = self._apply_directive(proposals, directive)
             if cache_path is not None:
                 cache_path.write_text(
                 json.dumps(
@@ -310,7 +355,7 @@ class LLMActionProposer:
                 )
             if self.strict:
                 raise RuntimeError(f"Formal PAFA LLM proposal failed: {exc}") from exc
-            proposals = self.rule.propose(round_number, capsules, memory)
+            proposals = self.rule.propose(round_number, capsules, memory, directive)
             proposals = {
                 client_id: ActionProposal(
                     proposal.client_id,
@@ -390,3 +435,24 @@ class LLMActionProposer:
 
     def observe(self, credit: CreditRecord) -> None:
         del credit
+
+    @staticmethod
+    def _apply_directive(
+        proposals: dict[str, ActionProposal], directive: CohortDirective | None
+    ) -> dict[str, ActionProposal]:
+        if directive is None:
+            return proposals
+        constrained: dict[str, ActionProposal] = {}
+        for client_id, proposal in proposals.items():
+            action_ids = _constrain_action_ids(
+                [action.action_id for action in proposal.candidates], directive
+            )
+            constrained[client_id] = ActionProposal(
+                proposal.client_id,
+                proposal.diagnosis,
+                ("public cohort directive consumed locally", *proposal.evidence),
+                resolve_action_ids(action_ids),
+                proposal.source,
+                proposal.prompt_hash,
+            )
+        return constrained

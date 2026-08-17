@@ -16,9 +16,9 @@
 ## 当前最高优先级
 
 - 项目已从 `protocol_v1 frozen/test` 转入 `protocol_v2 draft`。旧结果不删除、不改写，但不再驱动正式主张。
-- v2 创新定义为“诊断—候选—局部反事实探针—安全执行—后验信用”的可验证智能体控制闭环，而非 LLM 动态调参。
+- v2 创新定义为“诊断—候选—局部反事实探针—安全执行—后验信用”加上 `CohortDirective` 安全黑板反馈的可验证智能体控制闭环，而非 LLM 动态调参。C1 已实现：directive 只含固定无身份字段，并严格绑定上一轮聚合结果；rule、bandit、LLM proposer 均消费相同 directive。
 - 新确认集首选 KDD Cup 2018 Fresh Air 北京+伦敦多站点数据；必须先冻结 manifest/切分哈希，再产生任何确认结果。
-- 隐私威胁模型见 `docs/11_privacy_threat_model.md`。当前实现要求 SecAgg+ 四阶段每个阶段都收到完整唯一客户端集合的一次回复，并把会话绑定到 run/node/round/stage；相关门禁已通过 2026-08-18 全量验证。下一步允许的同进程验证 smoke 仍只是 nonformal 工程证据，test 与正式协议继续 fail-closed。
+- 隐私威胁模型见 `docs/11_privacy_threat_model.md`。当前实现要求 SecAgg+ 四阶段每个阶段都收到完整唯一客户端集合的一次回复，并把会话绑定到 run/node/round/stage；相关门禁已通过 2026-08-18 全量验证。C1 新增 public directive 的 schema、round/replay 和动作消费门禁。下一步允许的同进程验证 smoke 仍只是 nonformal 工程证据，test 与正式协议继续 fail-closed。
 - Flower 数值路径处理的是加权完整模型参数的逐坐标量化裁剪，不是更新差分的 L2 裁剪。客户端裁剪风险只以布尔指示量安全聚合；一旦群组指示代表至少一个客户端违规，本轮失效且不得进入协调器或有效工件。
 
 ## 当前阻塞项
@@ -32,7 +32,7 @@
 ## 下一步
 
 1. 暂停 seeds `123,456,789,2024`；已中断的 centralized seed123 标记 invalid，不续跑 v1 队列。
-2. P0 与 P1 隐私预检已完成；下一步做 12 站 1 轮 P1 同进程隐私 smoke，并在通过后扩到 3 轮。该 smoke 不作为正式隐私证据；通过后才做 seed42 验证集 10 轮 P2。
+2. C1 协同闭环已完成并通过定向测试；下一步做 12 站 1 轮 P1 同进程隐私 smoke，并在通过后扩到 3 轮，确认真实 ClientApp 会消费上一轮 directive。该 smoke 不作为正式隐私证据；通过后才做 seed42 验证集 10 轮 P2。
 3. v2 必须加入相同动作空间的 contextual-bandit、no-probe 和 probe-only 对照，避免把额外计算或动作空间收益误归因于 LLM。
 
 任何未经真实执行与 `validate_run` 验证的结果均为 `TBD`。

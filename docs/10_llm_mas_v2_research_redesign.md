@@ -46,7 +46,7 @@
 
 ### 3.2 分层 LLM 多智能体协同
 
-每个客户端的本地 LLM 智能体依据私有状态生成受 Schema 约束的诊断和 2--3 个候选动作。聚合级协调智能体每轮只依据安全聚合后的群组摘要生成公共阶段和学习率上限。当前实现为确定性、可审计协调器；只有在这一对照稳定后，才允许增加使用相同输入/输出 Schema 的协调 LLM。协调器不接收 client ID、单站点指标或单客户端更新，也不直接输出任意聚合权重。
+每个客户端的本地 LLM 智能体依据私有状态生成受 Schema 约束的诊断和 2--3 个候选动作。聚合级协调器每轮只依据安全聚合后的群组摘要生成无身份 `CohortDirective`：`phase`、`priority`、`lr_scale_cap`、动作许可掩码和 `directive_round`。该指令在下一轮广播，客户端把它与私有状态结合后重新筛选候选动作；因此公共黑板反馈会实际改变 rule、bandit 和 LLM proposer 的本地动作，而不是只改变一个服务器学习率上限。`directive_round` 必须等于上一轮已完成聚合轮次，过期、重放或跨轮指令 fail-closed。当前实现为确定性、可审计协调器；只有在这一对照稳定后，才允许增加使用相同输入/输出 Schema 的协调 LLM。协调器不接收 client ID、单站点指标或单客户端更新，也不直接输出任意聚合权重。
 
 首版动作库保持小而可审计：
 
@@ -148,8 +148,8 @@ seed=42 原 test 已被读取且影响本次方法设计，因此仅能标为 `d
 1. `completed`：v2 类型、动作库、探针、预算会计、安全执行器和本地记忆。
 2. `completed`：rule、contextual bandit、probe oracle 与本地 LLM proposer 共用同一动作空间。
 3. `completed_engineering`：Flower 官方 SecAgg+ 四阶段合成集成测试；客户端回复清洗；群组统计向量与聚合级协调器。
-4. `completed_engineering`：四阶段严格全客户端、缺失/重复、会话重放/乱序、消息身份与轮次绑定、数值容量和聚合裁剪指示门禁，以及 12 客户端合成量化误差回归，已通过 2026-08-18 全量验证（`105 passed, 1 skipped`；ruff、mypy、diff 检查通过）。
-5. `pending`：运行 12 站 1--3 轮 P1 同进程隐私 smoke；该 smoke 仍是 nonformal 工程证据。
+4. `completed_engineering`：四阶段严格全客户端、缺失/重复、会话重放/乱序、消息身份与轮次绑定、数值容量和聚合裁剪指示门禁，以及 12 客户端合成量化误差回归，已通过 2026-08-18 全量验证；新增 `CohortDirective` 轮次绑定与三类 proposer 消费测试（当前定向测试 `25 passed`）。
+5. `pending`：运行 12 站 1--3 轮 P1 同进程隐私 smoke，并验证 directive 在真实 ClientApp 下一轮改变动作；该 smoke 仍是 nonformal 工程证据。
 6. `blocked`：安全聚合的 test 指标评估、机构隔离部署以及机构签名的 `node -> physical station` 绑定未完成前，不运行正式 test 或多 seed。
 
 这一路线的目标不是保证 LLM 一定获胜，而是让“LLM 是否提供了传统控制器没有的增量价值”成为可以被严格检验的问题。
