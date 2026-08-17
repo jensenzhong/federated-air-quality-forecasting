@@ -31,19 +31,55 @@ mypy aqfl
 pytest --cov=aqfl --cov-report=term-missing
 ```
 
-## 4. 基线和 Flower
+## 4. 基线和低内存 Flower 路线
 
 先跑确定性基线，再跑短学习基线；主实验不得提前访问 test。Flower 前执行：
+
+```powershell
+python -m aqfl.experiments.run_baseline --method seasonal_naive --split val
+python -m aqfl.experiments.run_baseline --method centralized_gru --split val --max-epochs 1
+python -m aqfl.experiments.run_baseline --method local_gru --split val --max-epochs 1
+```
+
+`--max-epochs`、`--hidden-size` 和 `--learning-rate` 是验证集 smoke/screening 专用参数，代码会拒绝将它们用于测试集或冻结协议。
+
+生成预注册筛选计划：
+
+```powershell
+python -m aqfl.experiments.sweep --plan configs/experiments/formal.yaml --stage screening
+```
+
+该命令生成 13 项参数化任务但不执行；重复生成同一计划不会覆盖已取得进展的任务。当前筛选预算固定为 seed=42、验证集、联邦3轮/本地1 epoch、集中式 GRU 1 epoch；W1/W2 和 W3 设计复核已通过。
+
+当前可复现的低内存可行性命令：
+
+```powershell
+python scripts/run_sim.py fedprox 42 1
+```
+
+该命令使用12个站点、逐客户端训练、同步聚合，只允许 `fedavg`/`fedprox`，并强制写入 `evaluation_split=val`、`protocol_frozen=false`、`formal_eligible=false`。它保留为早期资源可行性对照，不替代严格 Flower 入口。
+
+W1 严格顺序 Flower 入口已实现，仍保持12站点全部参与，并直接调用真实 `ClientApp` 与 `Strict Strategy`：
+
+```powershell
+python scripts/run_flower_sequential.py --method fedprox --rounds 1 --seed 42
+```
+
+该入口不启动 Ray 或多进程；每轮按 `data/cache/metadata.json` 的站点顺序逐客户端执行。当前运行仍需通过 W2 等价性与三轮资源门禁后，才能进入正式筛选。
+
+全并发多进程只作为可选传输层检查。执行前可运行：
 
 ```powershell
 python -c "from aqfl.config import load_config; from aqfl.federated.resources import enforce_resource_gate; enforce_resource_gate(load_config('configs/base.yaml'))"
 ```
 
-不满足资源门槛时停止。满足后执行 1 轮、3 轮、再 30 轮。LLM-MAS 需通过环境变量设置新密钥，先用缓存/规则完成非网络测试。
+不满足该门槛时跳过全并发检查，不再阻塞低内存主线。严格顺序入口完成后按“1轮等价性→3轮资源基准→screening→单种子30轮”推进。LLM-MAS 需通过环境变量设置新密钥，先用缓存/规则完成非网络测试。
 
 ## 5. 运行验证
 
 每个运行目录应包含 resolved config、dataset manifest、environment、round/client parquet、predictions、decisions、system metrics、checkpoint、summary。执行 `validate_run` 后，注册表状态才能转为 validated；invalid 运行保留但报告器跳过。
+
+协议冻结后的 test 只允许从验证集已选 checkpoint 做一次性评估，避免把 test 指标送回每轮策略选择。使用 `scripts/evaluate_frozen_checkpoints.py --source-run-id <val-run-id>` 生成新的 `evaluation_split=test` 工件；源运行必须是 completed、val-only 且 `protocol_frozen=false`，生成工件必须通过 `validate_artifact_directory` 后才能登记为 validated。
 
 ## 6. 恢复与重跑
 

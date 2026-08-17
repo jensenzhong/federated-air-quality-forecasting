@@ -8,20 +8,43 @@ from typing import Any
 from flwr.app import ArrayRecord, ConfigRecord, Context
 from flwr.serverapp import Grid, ServerApp
 
-from aqfl.agents import BudgetReplayPlanner, LLMPlanningAgent, RulePlanningAgent
+from aqfl.agents import (
+    BudgetReplayPlanner,
+    LLMPlanningAgent,
+    RulePlanningAgent,
+)
 from aqfl.config import load_config, resolve_project_path, set_seed
 from aqfl.data.dataset import list_stations, load_cache_metadata, load_station_dataset
 from aqfl.data.preprocessing import GlobalScalerState
 from aqfl.evaluation.metrics import aggregate_station_metrics
 from aqfl.federated.dynamic_strategy import DynamicAggregationStrategy
 from aqfl.federated.metrics import aggregate_evaluation_metrics, aggregate_training_metrics
-from aqfl.federated.resources import enforce_resource_gate, resource_snapshot
+from aqfl.federated.resources import (
+    enforce_resource_gate,
+    enforce_sequential_resource_gate,
+    resource_snapshot,
+)
+from aqfl.federated.secure_aggregation import run_secure_pafa
 from aqfl.federated.strict import StrictFedAdam, StrictFedAvg, StrictFedProx, StrictQFedAvg
 from aqfl.models import build_model
 from aqfl.models.training import evaluate_model
+from aqfl.privacy import enforce_pafa_run_mode
 from aqfl.reporting.artifacts import RunArtifacts
 
 app = ServerApp()
+
+DEFAULT_QFFL_LR = 1.0
+
+
+def resolve_qffl_lr(run_config: dict[str, Any], config: dict[str, Any]) -> float:
+    """Return the frozen q-FFL Lipschitz eta. This is not the local AdamW lr."""
+    raw = run_config.get("qffl-lr") if hasattr(run_config, "get") else None
+    if raw is not None:
+        return float(raw)
+    federated = config.get("federated", {})
+    if "qfedavg_qffl_lr" in federated:
+        return float(federated["qfedavg_qffl_lr"])
+    return DEFAULT_QFFL_LR
 
 
 def _base_kwargs(expected_clients: int) -> dict[str, Any]:
@@ -34,6 +57,15 @@ def _base_kwargs(expected_clients: int) -> dict[str, Any]:
         "train_metrics_aggr_fn": aggregate_training_metrics,
         "evaluate_metrics_aggr_fn": aggregate_evaluation_metrics,
     }
+
+
+def _write_grid_telemetry(grid: Grid, path: Any) -> None:
+    rows = getattr(grid, "telemetry", [])
+    if not rows:
+        return
+    with path.open("a", encoding="utf-8") as handle:
+        for row in rows:
+            handle.write(json.dumps(row) + "\n")
 
 
 @app.main()
@@ -49,21 +81,31 @@ def main(grid: Grid, context: Context) -> None:
         "learning_rate": float(context.run_config["lr"]),
         "proximal_mu": float(context.run_config["proximal-mu"]),
         "q": float(context.run_config["q"]),
+        "qffl_lr": resolve_qffl_lr(context.run_config, config),
         "server_lr": float(context.run_config["server-lr"]),
         "budget_trace": str(context.run_config.get("budget-trace", "")),
         "evaluation_split": str(context.run_config.get("evaluation-split", "val")),
         "protocol_frozen": bool(context.run_config.get("protocol-frozen", False)),
+        "execution_mode": str(context.run_config.get("execution-mode", "full_concurrency")),
+        "probe_enabled": method != "pafa_llm_no_probe",
     }
     set_seed(seed)
     expected_clients = len(list_stations(config))
     if expected_clients != int(config["federated"]["num_clients"]):
         raise RuntimeError("Prepared station count does not match federated.num_clients")
+    execution_mode = str(context.run_config.get("execution-mode", "full_concurrency"))
     if bool(context.run_config.get("enforce-resource-check", True)):
-        enforce_resource_gate(config)
+        if execution_mode == "low_memory_sequential":
+            enforce_sequential_resource_gate(config)
+        else:
+            enforce_resource_gate(config)
 
     artifacts = RunArtifacts(config, method, seed)
     with (artifacts.path / "system_metrics.jsonl").open("a", encoding="utf-8") as handle:
-        handle.write(json.dumps({"event": "server_start", **resource_snapshot()}) + "\n")
+        handle.write(
+            json.dumps({"event": "server_start", "execution_mode": execution_mode, **resource_snapshot()})
+            + "\n"
+        )
     model = build_model(config)
     arrays = ArrayRecord(model.state_dict())
     kwargs = _base_kwargs(expected_clients)
@@ -73,6 +115,68 @@ def main(grid: Grid, context: Context) -> None:
         raise ValueError(f"Unsupported evaluation-split: {evaluation_split}")
     if evaluation_split == "test" and not bool(context.run_config.get("protocol-frozen", False)):
         raise RuntimeError("Test evaluation requires protocol-frozen=true")
+    enforce_pafa_run_mode(
+        method,
+        evaluation_split=evaluation_split,
+        protocol_frozen=bool(context.run_config.get("protocol-frozen", False)),
+        secure_aggregation_active=method.startswith("pafa_"),
+        client_state_isolated=bool(context.run_config.get("client-state-isolated", False)),
+    )
+
+    if method.startswith("pafa_"):
+        event_log = artifacts.path / "agentic_events.jsonl"
+        event_log.touch()
+        try:
+            secure_result = run_secure_pafa(
+                grid=grid,
+                context=context,
+                initial_arrays=arrays,
+                config=config,
+                method=method,
+                num_rounds=int(context.run_config["num-server-rounds"]),
+                base_lr=base_lr,
+                batch_size=int(context.run_config["batch-size"]),
+                strict_llm=bool(context.run_config["strict-llm"]),
+                probe_enabled=method != "pafa_llm_no_probe",
+                event_log=event_log,
+            )
+            model.load_state_dict(secure_result.best_arrays.to_torch_state_dict())
+            summary = {
+                "protocol": "flower_secaggplus_client_local_agents",
+                "execution_mode": execution_mode,
+                "num_clients": expected_clients,
+                "num_rounds": int(context.run_config["num-server-rounds"]),
+                "checkpoint_selection": "secure_cohort_validation_macro_mae",
+                "evaluation_split": evaluation_split,
+                "protocol_frozen": bool(context.run_config.get("protocol-frozen", False)),
+                "best_round": secure_result.best_round,
+                "best_validation_macro_mae": secure_result.best_macro_mae,
+                "agentic_v2": True,
+                "agent_location": "client_context_state_only",
+                "secure_aggregation": "flower_secaggplus",
+                "coordinator_visibility": "cohort_summary_only",
+                "client_metrics_persisted_on_server": False,
+                "differential_privacy": False,
+                "test_metrics": "TBD",
+                "final_validation": secure_result.round_metrics[-1]
+                if secure_result.round_metrics
+                else {},
+            }
+            _write_grid_telemetry(grid, artifacts.path / "system_metrics.jsonl")
+            artifacts.finalize(
+                model,
+                summary,
+                round_metrics=secure_result.round_metrics,
+                client_metrics=[],
+                status="completed",
+            )
+        except Exception:
+            _write_grid_telemetry(grid, artifacts.path / "system_metrics.jsonl")
+            artifacts.invalidate("PAFA_PRIVACY_GATE_FAILED")
+            raise RuntimeError(
+                "PAFA secure cohort failed closed; inspect institution-local client logs"
+            ) from None
+        return
 
     if method == "fedavg":
         strategy = StrictFedAvg(expected_clients=expected_clients, **kwargs)
@@ -85,7 +189,7 @@ def main(grid: Grid, context: Context) -> None:
     elif method == "qfedavg":
         strategy = StrictQFedAvg(
             expected_clients=expected_clients,
-            client_learning_rate=base_lr,
+            client_learning_rate=float(config["runtime"]["qffl_lr"]),
             q=float(context.run_config["q"]),
             **kwargs,
         )
@@ -171,6 +275,8 @@ def main(grid: Grid, context: Context) -> None:
             evaluation_summary = aggregate_station_metrics(station_metrics)
         summary = {
             "protocol": "flower_serverapp_clientapp",
+            "execution_mode": execution_mode,
+            "client_schedule": "deterministic_sequential" if execution_mode == "low_memory_sequential" else "flower_transport",
             "num_clients": expected_clients,
             "num_rounds": int(context.run_config["num-server-rounds"]),
             "checkpoint_selection": "validation_macro_mae",
@@ -178,10 +284,14 @@ def main(grid: Grid, context: Context) -> None:
             "protocol_frozen": bool(context.run_config.get("protocol-frozen", False)),
             "best_round": strategy.best_round,
             "best_validation_macro_mae": strategy.best_macro_mae,
+            "agentic_v2": method.startswith("pafa_"),
+            "probe_enabled": method.startswith("pafa_") and method != "pafa_llm_no_probe",
             "final_validation": round_rows[-1] if round_rows else {},
             **evaluation_summary,
         }
+        _write_grid_telemetry(grid, artifacts.path / "system_metrics.jsonl")
         artifacts.finalize(model, summary, round_metrics=round_rows, client_metrics=client_rows)
     except Exception as exc:
+        _write_grid_telemetry(grid, artifacts.path / "system_metrics.jsonl")
         artifacts.invalidate(str(exc))
         raise

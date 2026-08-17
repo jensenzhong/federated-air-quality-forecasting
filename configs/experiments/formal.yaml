@@ -1,6 +1,15 @@
 name: formal-main-comparison
 stage_order: [smoke, screening, single_seed_full, formal_five_seed, ablation, robustness]
 wall_clock_stop_days: 7
+execution:
+  mode: low_memory_sequential_synchronous
+  runner: scripts/run_flower_sequential.py
+  all_clients_per_main_round: 12
+  client_order: data/cache/metadata.json
+  prerequisites:
+    - two_client_equivalence
+    - twelve_client_one_round_equivalence
+    - three_round_resource_benchmark
 seeds: [42, 123, 456, 789, 2024]
 methods:
   - persistence
@@ -18,11 +27,12 @@ robustness:
   - client_dropout_3_of_12
   - missing_blocks_10pct_6h
   - sensor_drift_10pct
-result_status: TBD
+result_status: seed42_test_validated_multiseed_pending
 protocol:
-  data_manifest_sha256: TBD_AFTER_PROTOCOL_FREEZE
-  git_commit: TBD_AFTER_PROTOCOL_FREEZE
-  config_sha256: TBD_AFTER_PROTOCOL_FREEZE
+  data_manifest_sha256: b4f6f89661798c638e72d5c3bf696612eb175e75d93f9fae15750bd9bdec763d
+  git_commit: 8151de3
+  config_sha256: 9f6b55a6b54e80077e3280b2b7c9b6c3b0fc3bec4699773c9cefa24987faaab0
+  status: frozen_pre_test
   primary_comparison: mas_llm_vs_fedprox_budget_matched
   bootstrap_resamples: 10000
   block_hours: 24
@@ -32,6 +42,12 @@ ablations:
   - mas_llm_no_fairness
   - mlp
 screening:
+  rounds: 3
+  centralized_epochs: 1
+  selection:
+    primary_metric: macro_mae
+    tie_breakers: [worst_station_mae, station_mae_cv, elapsed_seconds]
+    test_access: prohibited
   model:
     hidden_size: [32, 64]
     learning_rate: [0.0005, 0.001]

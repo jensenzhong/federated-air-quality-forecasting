@@ -22,7 +22,9 @@ def build_report(registry_path: Path, output: Path) -> None:
             "Macro MAE": summary.get("macro_mae", "TBD"),
             "Worst Station MAE": summary.get("worst_station_mae", "TBD"),
             "Station MAE CV": summary.get("station_mae_cv", "TBD"),
-            "Status": summary.get("status", "TBD"),
+            # The registry is the promotion authority. A stale summary must not
+            # downgrade or otherwise misrepresent a validated run in a report.
+            "Status": record["status"],
         })
     output.parent.mkdir(parents=True, exist_ok=True)
     table = pd.DataFrame(rows).to_markdown(index=False) if rows else "No validated experiment results are available."

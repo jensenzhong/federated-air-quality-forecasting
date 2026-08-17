@@ -25,6 +25,7 @@ artifacts/llm_cache/
 *.parquet
 *.log
 .flwr/
+.spec-workflow/
 dist/
 build/
 *.egg-info/

@@ -43,6 +43,25 @@ def enforce_resource_gate(config: dict[str, Any]) -> dict[str, float | int]:
     return snapshot
 
 
+def enforce_sequential_resource_gate(config: dict[str, Any]) -> dict[str, float | int]:
+    """Preflight the single-process route without applying full-concurrency limits."""
+    snapshot = resource_snapshot()
+    requirements = config["resources"]
+    min_cpus = int(requirements.get("sequential_min_logical_cpus", 1))
+    min_memory = float(requirements.get("sequential_min_available_memory_gb", 0.5))
+    if snapshot["logical_cpus"] < min_cpus:
+        raise RuntimeError(
+            f"Sequential protocol requires {min_cpus} logical CPU; "
+            f"found {snapshot['logical_cpus']}"
+        )
+    if snapshot["available_memory_gb"] < min_memory:
+        raise RuntimeError(
+            f"Sequential protocol requires {min_memory:g} GB free RAM; "
+            f"found {snapshot['available_memory_gb']:.2f} GB"
+        )
+    return snapshot
+
+
 def append_system_snapshot(path: Path, event: str) -> None:
     payload = {"event": event, **resource_snapshot()}
     with path.open("a", encoding="utf-8") as handle:

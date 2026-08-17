@@ -1,29 +1,38 @@
 # PROJECT_STATUS
 
-最后更新：2026-08-13（Asia/Shanghai）
+最后更新：2026-08-18（Asia/Shanghai）
 
 | 里程碑 | 状态 | 已有证据 | 剩余门禁 |
 |---|---|---|---|
 | M0 安全归档 | 部分完成 | 85 文件归档总清单；9 文件删除清单；扫描 0 命中 | 用户在服务商控制台撤销旧密钥 |
-| M1 项目初始化 | 门禁通过 | `uv sync --extra dev --frozen` 干净安装通过；ruff/mypy 通过；51 项测试通过；核心覆盖率 92.67%；Git 提交 `298ea98` | 无 |
+| M1 项目初始化 | 门禁通过 | `uv sync --extra dev --frozen` 通过；2026-08-18 全量验证为 105 项测试通过、1 项完整数据测试因 `BEIJING_AQ_DATA_DIR` 未配置跳过；ruff、mypy（50 个源码文件）和 `git diff --check` 通过；报告依赖已完整锁定 | 无 |
 | M2 数据完成 | 门禁通过 | 12 站/420,768 行 manifest；220 个缓存文件；质量报告；全数据测试通过 | 无 |
-| M3 模型完成 | 进行中 | GRU、MLP、Naive、Local、Centralized；Persistence 验证集 smoke 已运行并按报告门禁标记 invalid | 完成小网格、Local/Centralized smoke 与架构冻结 |
-| M4 Flower 完成 | 资源阻塞 | ServerApp/ClientApp；固定策略；2 客户端一轮内存集成通过 | 可用内存≥10GB 后执行真实 12 客户端全并发一轮 |
-| M5 MAS 完成 | 进行中 | Rule、LLM、JSON Schema、缓存、回退、动态聚合、预算回放；单测通过 | 完成真实 Flower 决策回放门禁 |
-| M6 正式实验 | 未开始 | 冻结候选协议和队列 | 资源门禁、协议冻结、所有真实运行验证 |
+| M3 模型完成 | v1 已审计；v2 重设计 | v1 的 13/13 screening、7 个 30 轮确认及 seed42 test 已保留；量化确认 LLM-MAS 9.6702 未优于预算匹配 FedProx 9.4665，且动作发生塌缩 | 按 `docs/10_llm_mas_v2_research_redesign.md` 实现并通过 P0--P2 |
+| M4 Flower 完成 | 门禁通过 | ServerApp/ClientApp；固定策略；等价门禁 4 案例通过；12 站 FedProx 3 轮真实 ClientApp 基准完成（328.94 秒、峰值 RSS 0.392GB、最低可用内存 1.329GB）；13 项 screening 全部顺序完成 | 保持低内存顺序执行；后续 30 轮确认与正式队列继续记录峰值内存 |
+| M5 MAS 完成 | P1 隐私预检通过 | 动作、探针、执行、记忆已下沉 ClientApp；旧服务器逐客户端策略永久 fail-closed；Flower SecAgg+ 3 客户端与 12 客户端四阶段合成闭环通过；严格全客户端、缺失回复 fail-closed、会话重放/乱序、消息身份、数值容量、量化误差和聚合裁剪指示门禁已通过全量验证 | 下一步仅运行 12 站 P1 同进程 smoke；安全 test 评估、机构隔离和机构签名的 node->physical-station 绑定仍阻塞 |
+| M6 正式实验 | 暂停 | seed42 v1 test 结果完整保留，但因已用于 v2 设计，只能作为 v2 的开发审计证据 | v2 P2 通过后冻结；建立新的未见确认集后才恢复多 seed |
 | M7 论文证据包 | 未开始 | 报告和统计生成模块 | 只使用 validated 运行生成表图与结论 |
+
+## 当前最高优先级
+
+- 项目已从 `protocol_v1 frozen/test` 转入 `protocol_v2 draft`。旧结果不删除、不改写，但不再驱动正式主张。
+- v2 创新定义为“诊断—候选—局部反事实探针—安全执行—后验信用”的可验证智能体控制闭环，而非 LLM 动态调参。
+- 新确认集首选 KDD Cup 2018 Fresh Air 北京+伦敦多站点数据；必须先冻结 manifest/切分哈希，再产生任何确认结果。
+- 隐私威胁模型见 `docs/11_privacy_threat_model.md`。当前实现要求 SecAgg+ 四阶段每个阶段都收到完整唯一客户端集合的一次回复，并把会话绑定到 run/node/round/stage；相关门禁已通过 2026-08-18 全量验证。下一步允许的同进程验证 smoke 仍只是 nonformal 工程证据，test 与正式协议继续 fail-closed。
+- Flower 数值路径处理的是加权完整模型参数的逐坐标量化裁剪，不是更新差分的 L2 裁剪。客户端裁剪风险只以布尔指示量安全聚合；一旦群组指示代表至少一个客户端违规，本轮失效且不得进入协调器或有效工件。
 
 ## 当前阻塞项
 
-- 最近一次主机快照约有 0.42 GB 可用内存，低于 12 客户端全并发门槛 10 GB；完整 Flower 运行必须先释放内存。
-- DeepSeek 正式运行需要新的 `DEEPSEEK_API_KEY`，旧密钥撤销只能由用户在服务商侧完成。
-- 正式运行预计时长必须由 3 轮资源基准产生；若主实验预计超过 7 天，停止队列并记录计算资源阻塞。
+- 当前 `scripts/run_sim.py` 只覆盖 FedAvg/FedProx，保留为早期资源对照；正式低内存入口是 `scripts/run_flower_sequential.py`。v1 test 工件已验证，但不得转用为 v2 的未见确认结果。
+- Windows 原生 Ray 后端启动 object store 超时；该路径已放弃，不阻塞顺序运行时主线。
+- 严格 LLM-MAS 已用当前 `DEEPSEEK_API_KEY` 完成 30 轮验证；密钥不写入仓库，后续重跑仍需在运行环境显式提供。
+- v2 顺序 runner 可用于 SecAgg+ 工程验证，但客户端与服务器同进程，因此没有机构隔离资格；新增 probe 的墙钟与峰值 RSS 必须在 P1 重新测量，不能套用 v1 的时长估计。
+- 顺序 runner 的唯一 partition/站点配置和 Flower 消息元数据校验不能证明节点对应真实物理站点；正式部署仍需机构签名或等价可信注册的 `Flower node -> physical station` 绑定。
 
 ## 下一步
 
-1. 执行 GRU 小网格和 Local/Centralized 短基线，只使用验证集。
-2. 释放内存后执行 12 客户端 1 轮和 3 轮资源基准。
-3. 冻结方法超参数、配置哈希和 Git 提交。
-4. 依次进入单种子、五种子、消融和鲁棒性队列。
+1. 暂停 seeds `123,456,789,2024`；已中断的 centralized seed123 标记 invalid，不续跑 v1 队列。
+2. P0 与 P1 隐私预检已完成；下一步做 12 站 1 轮 P1 同进程隐私 smoke，并在通过后扩到 3 轮。该 smoke 不作为正式隐私证据；通过后才做 seed42 验证集 10 轮 P2。
+3. v2 必须加入相同动作空间的 contextual-bandit、no-probe 和 probe-only 对照，避免把额外计算或动作空间收益误归因于 LLM。
 
 任何未经真实执行与 `validate_run` 验证的结果均为 `TBD`。

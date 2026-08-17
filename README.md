@@ -2,13 +2,15 @@
 
 基于 Flower 的北京多站点空气质量联邦多智能体协同预测研究工程。项目将 UCI Beijing Multi-Site Air Quality Data 的 12 个监测站映射为 12 个联邦客户端，使用过去 24 小时的污染物、气象和时间特征预测未来 1 小时 PM2.5。
 
-本仓库强调可复现、无时间泄漏和可审计。当前代码不提供差分隐私、密码学安全聚合或真实跨机构隔离；准确表述是：联邦训练通信不传输原始数据行。
+本仓库强调可复现、无时间泄漏和可审计。v2 PAFA 已接入 Flower SecAgg+，并通过 3 客户端协议闭环与 12 客户端量化/缺失/重放/身份合成工程门禁；尚未完成 12 站真实 smoke 或跨机构隔离。项目不提供差分隐私，也不声称形式化 DP 保证。
 
 ## 当前状态
 
 - 工程脚手架、数据管线、GRU/MLP、基线、Flower ServerApp/ClientApp、固定联邦策略、Rule-MAS、LLM-MAS、审计工件与统计模块已实现。
+- v2 将站点 agent、prompt、probe 和记忆保留在 ClientApp，本地更新与群组统计通过 SecAgg+ 聚合；旧服务器逐客户端 agent 路径已永久禁用。P1 隐私预检已通过，下一步仅允许 nonformal 的 12 站同进程 smoke；正式 test 和多 seed 仍处于隐私门禁阻塞状态。
+- 12 站 FedProx 严格顺序 Flower 入口已通过等价性门禁，并完成 3 轮低内存资源基准；13 项验证集 screening 已完成，但候选仍需 30 轮确认、协议冻结和 `validate_run`。
 - 真实数据缓存、测试和静态检查需按 `PROJECT_STATUS.md` 的证据状态确认。
-- 正式实验结果全部保持 `TBD`，只有 `validated` 运行可进入报告。
+- screening 报告为 nonformal 验证证据，见 `artifacts/reports/screening_results.md`；正式实验结果仍全部保持 `TBD`，只有 `validated` 运行可进入正式报告。
 
 ## 环境
 
@@ -59,17 +61,32 @@ python -m aqfl.experiments.run_baseline --method seasonal_naive
 python -m aqfl.experiments.run_baseline --method centralized_gru
 ```
 
+验证集短基线可使用显式 epoch 覆盖；该选项禁止用于冻结协议或测试集：
+
+```powershell
+python -m aqfl.experiments.run_baseline --method centralized_gru --split val --max-epochs 1
+python -m aqfl.experiments.run_baseline --method local_gru --split val --max-epochs 1
+```
+
 Flower 运行：
 
 ```powershell
 flwr run . local-12 --run-config "method=fedprox seed=42"
 ```
 
-全并发 12 客户端启动前会检查至少 13 个逻辑处理器和 10 GB 可用内存；不满足时直接失败，不会静默降低并发或客户端数。独立进程启动入口为：
+全并发 12 客户端目前只保留为可选传输层检查；启动前会检查至少 13 个逻辑处理器和 10 GB 可用内存。独立进程入口为：
 
 ```powershell
 .\scripts\launch_flower_12_clients.ps1 -Method fedprox -Seed 42 -Rounds 1
 ```
+
+低内存可行性入口会保持12站全部参与并逐客户端执行：
+
+```powershell
+python scripts/run_flower_sequential.py --method fedprox --rounds 1 --seed 42
+```
+
+该入口直接调用真实 Flower `ClientApp`/`Strict Strategy`，但当前仍属于验证集工程 smoke；正式资格见 `docs/03_experiment_protocol.md` 的顺序运行时等价门禁。`scripts/run_sim.py` 保留为早期资源可行性对照。
 
 实验队列与结果审计：
 
@@ -80,6 +97,9 @@ python -m aqfl.reporting.build_report --registry artifacts/experiment_registry.c
 ```
 
 队列命令默认只生成计划；显式传入 `--execute` 才会执行。长实验必须遵循 `docs/03_experiment_protocol.md` 的冻结和资源门禁。
+参数筛选使用 `--stage screening`，生成 4 个 GRU、3 个 FedProx、3 个 QFedAvg 和 3 个 FedAdam 任务；筛选固定为 seed=42、验证集、联邦 3 轮/本地 1 epoch、集中式 GRU 1 epoch。执行前同样必须满足 Flower 资源门禁。
+
+筛选完成后可用 `python scripts/summarize_screening.py` 重新匹配 13 个运行工件并生成验证集选择报告；该脚本会拒绝读取 test 指标。Rule-MAS 与预算匹配回放门禁报告见 `artifacts/reports/mas_gate_rule_budget.md`。
 
 ## 数据与输出边界
 

@@ -1,0 +1,6 @@
+method: pafa_llm
+description: Client-local LLM proposals and memory with local probes, safe execution, and SecAgg+
+action_library: [safe_default, cautious, adapt_fast, tail_focus]
+probe_enabled: true
+strict_llm: true
+result_status: TBD

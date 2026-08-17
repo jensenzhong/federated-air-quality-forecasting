@@ -1,0 +1,6 @@
+method: pafa_probe_oracle
+description: Mechanism upper bound that probes every non-fallback intervention before safe execution
+action_library: [cautious, adapt_fast, tail_focus]
+fallback_action: safe_default
+probe_enabled: true
+result_status: TBD

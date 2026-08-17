@@ -1,0 +1,5 @@
+method: pafa_rule
+description: Client-local rule proposals with local probes, safe execution, and SecAgg+
+action_library: [safe_default, cautious, adapt_fast, tail_focus]
+probe_enabled: true
+result_status: TBD

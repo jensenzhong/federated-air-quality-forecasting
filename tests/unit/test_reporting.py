@@ -40,7 +40,10 @@ def test_report_reads_validated_only(tmp_path) -> None:
     invalid_dir = tmp_path / "invalid"
     valid_dir.mkdir()
     invalid_dir.mkdir()
-    (valid_dir / "summary.json").write_text(json.dumps({"method": "fedavg", "seed": 42, "macro_mae": 1}), encoding="utf-8")
+    (valid_dir / "summary.json").write_text(
+        json.dumps({"method": "fedavg", "seed": 42, "macro_mae": 1, "status": "completed"}),
+        encoding="utf-8",
+    )
     (invalid_dir / "summary.json").write_text(json.dumps({"method": "bad", "macro_mae": 999}), encoding="utf-8")
     registry = tmp_path / "registry.csv"
     pd.DataFrame(
@@ -53,7 +56,20 @@ def test_report_reads_validated_only(tmp_path) -> None:
     build_report(registry, output)
     text = output.read_text(encoding="utf-8")
     assert "fedavg" in text
+    assert "validated" in text
+    assert "completed" not in text
     assert "999" not in text
+
+
+def test_report_handles_empty_registry(tmp_path) -> None:
+    registry = tmp_path / "registry.csv"
+    pd.DataFrame(columns=ExperimentRegistry.COLUMNS).to_csv(registry, index=False)
+    output = tmp_path / "report.md"
+
+    build_report(registry, output)
+
+    text = output.read_text(encoding="utf-8")
+    assert "No validated experiment results are available." in text
 
 
 def test_run_artifacts_are_complete_and_immutable(tmp_path) -> None:
@@ -81,3 +97,39 @@ def test_run_artifacts_are_complete_and_immutable(tmp_path) -> None:
     assert summary["status"] == "completed"
     with pytest.raises(FileExistsError):
         artifacts.path.mkdir(exist_ok=False)
+
+
+def test_pafa_artifact_requires_complete_agentic_trace(tmp_path) -> None:
+    for name in REQUIRED_ARTIFACTS:
+        path = tmp_path / name
+        path.mkdir() if name == "predictions" else path.touch()
+    (tmp_path / "summary.json").write_text(
+        json.dumps(
+            {
+                "status": "completed",
+                "method": "pafa_rule",
+                "evaluation_split": "test",
+                "protocol_frozen": True,
+                "secure_aggregation": "flower_secaggplus",
+                "coordinator_visibility": "cohort_summary_only",
+                "client_metrics_persisted_on_server": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+    pd.DataFrame().to_parquet(tmp_path / "client_metrics.parquet")
+    assert "missing:agentic_events.jsonl" in validate_artifact_directory(tmp_path)
+    (tmp_path / "agentic_events.jsonl").write_text(
+        json.dumps(
+            {
+                "event": "cohort_summary",
+                "round": 1,
+                "cohort_size": 12,
+                "summary": {"cohort_val_macro_mae": 10.0},
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    assert "missing:agentic_events.jsonl" not in validate_artifact_directory(tmp_path)
+    assert "incomplete_agentic_event_trace" not in validate_artifact_directory(tmp_path)

@@ -50,6 +50,7 @@ federated:
   accept_failures: false
   fedprox_mu: 0.01
   qfedavg_q: 1.0
+  qfedavg_qffl_lr: 1.0
   fedadam_server_lr: 0.1
   weight_bounds: [0.04, 0.16]
 
@@ -62,10 +63,40 @@ llm:
   call_every_n_rounds: 2
   cache_dir: artifacts/llm_cache
   strict_formal_runs: true
+  client_base_url: http://127.0.0.1:11434/v1
+  client_model: local-institution-model
+  client_api_key_env: ""
+
+agentic_v2:
+  max_candidates: 3
+  probe_train_batches: 2
+  probe_val_batches: 2
+  minimum_probe_gain: 0.0
+  probe_uncertainty_margin: 0.001
+  extra_epoch_penalty: 0.001
+  bandit_alpha: 0.5
+  bandit_ridge: 1.0
+  memory_records_per_client: 20
+
+privacy:
+  mode: strict_federated
+  client_llm_allowed_hosts: []
+  coordinator_min_cohort_size: 10
+  secure_aggregation_required_for_formal: true
+  differential_privacy_enabled: false
+  privacy_claim: raw_rows_remain_local_only
+  secaggplus:
+    num_shares: 1.0
+    max_weight: 1.0
+    clipping_range: 8.0
+    quantization_range: 4194304
+    modulus_range: 4294967296
 
 resources:
   min_logical_cpus: 13
   min_available_memory_gb: 10
+  sequential_min_logical_cpus: 1
+  sequential_min_available_memory_gb: 0.5
   threads_per_client: 1
 
 evaluation:

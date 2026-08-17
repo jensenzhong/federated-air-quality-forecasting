@@ -7,6 +7,8 @@ import json
 import platform
 import subprocess
 import sys
+import threading
+import time
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -155,6 +157,59 @@ class RunArtifacts:
         (self.path / "summary.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
+class ProcessResourceSampler:
+    """Sample process RSS and host availability during non-federated runs."""
+
+    def __init__(self, path: Path, interval_seconds: float = 0.5) -> None:
+        if interval_seconds <= 0:
+            raise ValueError("interval_seconds must be positive")
+        self.path = path
+        self.interval_seconds = interval_seconds
+        self._process = psutil.Process()
+        self._stop = threading.Event()
+        self._thread = threading.Thread(
+            target=self._sample_until_stopped,
+            name="process-resource-sampler",
+            daemon=True,
+        )
+        self._started_at = time.monotonic()
+        self.peak_rss_gb = 0.0
+        self.minimum_available_memory_gb = float("inf")
+
+    def __enter__(self) -> ProcessResourceSampler:
+        self._write_sample("process_sampler_start")
+        self._thread.start()
+        return self
+
+    def __exit__(self, exc_type: Any, exc_value: Any, traceback: Any) -> None:
+        self._stop.set()
+        self._thread.join(timeout=max(1.0, self.interval_seconds * 4))
+        self._write_sample("process_sampler_end")
+
+    def _sample_until_stopped(self) -> None:
+        while not self._stop.wait(self.interval_seconds):
+            self._write_sample("process_sample")
+
+    def _write_sample(self, event: str) -> None:
+        try:
+            rss_gb = float(self._process.memory_info().rss / 1024**3)
+            available_memory_gb = float(psutil.virtual_memory().available / 1024**3)
+        except (psutil.Error, OSError):
+            return
+        self.peak_rss_gb = max(self.peak_rss_gb, rss_gb)
+        self.minimum_available_memory_gb = min(
+            self.minimum_available_memory_gb, available_memory_gb
+        )
+        payload = {
+            "event": event,
+            "elapsed_seconds": time.monotonic() - self._started_at,
+            "rss_gb": rss_gb,
+            "available_memory_gb": available_memory_gb,
+        }
+        with self.path.open("a", encoding="utf-8") as handle:
+            handle.write(json.dumps(payload) + "\n")
+
+
 def validate_artifact_directory(path: Path) -> list[str]:
     errors = []
     for name in REQUIRED_ARTIFACTS:
@@ -174,6 +229,43 @@ def validate_artifact_directory(path: Path) -> list[str]:
                 errors.append("protocol_not_frozen")
         except json.JSONDecodeError:
             errors.append("invalid_summary_json")
+    if summary_path.is_file():
+        try:
+            summary = json.loads(summary_path.read_text(encoding="utf-8"))
+            if str(summary.get("method", "")).startswith("pafa_"):
+                if summary.get("secure_aggregation") != "flower_secaggplus":
+                    errors.append("pafa_missing_verified_secaggplus")
+                if summary.get("coordinator_visibility") != "cohort_summary_only":
+                    errors.append("pafa_coordinator_visibility_violation")
+                if summary.get("client_metrics_persisted_on_server") is not False:
+                    errors.append("pafa_client_metrics_persisted")
+                event_path = path / "agentic_events.jsonl"
+                if not event_path.is_file():
+                    errors.append("missing:agentic_events.jsonl")
+                else:
+                    event_types: set[str] = set()
+                    for line in event_path.read_text(encoding="utf-8").splitlines():
+                        if not line.strip():
+                            continue
+                        event = json.loads(line)
+                        event_types.add(str(event.get("event", "")))
+                        serialized = json.dumps(event).lower()
+                        if any(
+                            token in serialized
+                            for token in ('"client_id"', '"node_id"', '"station"', '"partition_id"')
+                        ):
+                            errors.append("pafa_event_contains_client_identity")
+                    if "cohort_summary" not in event_types:
+                        errors.append("incomplete_agentic_event_trace")
+                client_metrics_path = path / "client_metrics.parquet"
+                if client_metrics_path.is_file():
+                    try:
+                        if not pd.read_parquet(client_metrics_path).empty:
+                            errors.append("pafa_client_metrics_not_empty")
+                    except Exception:
+                        errors.append("pafa_client_metrics_unreadable")
+        except json.JSONDecodeError:
+            errors.append("invalid_agentic_event_json")
     manifest_path = path / "dataset_manifest.json"
     environment_path = path / "environment.json"
     if manifest_path.is_file() and environment_path.is_file():

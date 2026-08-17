@@ -9,8 +9,8 @@ target_venue:
   template: TBD
   constraints: 暂不绑定会议模板
 stage:
-  current: implementation
-  gate: M3
+  current: privacy_preserving_llm_mas_redesign
+  gate: V2-PRIVACY
   status: in_progress
 artifacts:
   data_manifest: data/manifest.json
@@ -21,23 +21,201 @@ artifacts:
 claims:
   central:
     text: MAS-LLM相对计算预算匹配FedProx改善站点宏平均MAE且不损害公平性和鲁棒性
-    status: untested
-    required_evidence: M6主实验、配对分层Bootstrap、公平性非劣与压力实验
+    status: reopened_after_negative_v1_evidence
+    required_evidence: v2同动作空间消融、P2验证门槛、新未见确认集、多种子配对统计
   privacy:
-    text: 训练通信不传输原始数据行；不主张差分隐私或密码学安全
-    status: scoped
+    text: 原始数据与客户端智能体状态留在本地；正式方法要求安全聚合；未启用DP时不主张形式化差分隐私
+    status: synthetic_secagg_verified_real_cohort_pending
 experiments:
-  protocol_status: draft_pre_freeze
+  protocol_status: v1_closed_v2_implementation
   primary_metric: station_macro_mae
   seeds: [42, 123, 456, 789, 2024]
   formal_results: TBD
+  v2:
+    method: probe_then_act_federated_agent
+    status: p1_privacy_preflight_engineering_passed
+    design: docs/10_llm_mas_v2_research_redesign.md
+    old_seed42_test_role: development_audit_only
+    next_gate: P1_twelve_station_privacy_smoke
+    secagg_synthetic_test: passed_three_client_four_stage
+    secagg_quantization_test: passed_twelve_client_four_stage_hard_error_bound
+    strict_cohort_drop_test: passed_collect_stage_fail_closed
+    replay_and_identity_gates: passed
+    formal_test_status: blocked_until_secure_evaluation_and_isolated_clients
+    multiseed_v1: paused
   registry: artifacts/experiment_registry.csv
+  screening:
+    status: completed_nonformal
+    queue: artifacts/queue_screening.json
+    jobs: 13
+    completed_jobs: 13
+    report: artifacts/reports/screening_results.md
+    json_report: artifacts/reports/screening_results.json
+    evaluation_split: val
+    seed: 42
+    selected_validation_candidates:
+      centralized_gru: centralized_gru-42-20260817T022329Z-8151de3
+      fedprox: fedprox-42-20260817T022653Z-8151de3
+      qfedavg: qfedavg-42-20260817T124155Z-8151de3
+      fedadam: fedadam-42-20260817T030058Z-8151de3
+    formal_status: TBD_until_protocol_freeze_and_test
+    corrected_qfedavg_screening:
+      status: completed_nonformal
+      report: artifacts/reports/screening_qfedavg_corrected.md
+      selected_q: 0.1
+      selected_run_id: qfedavg-42-20260817T124155Z-8151de3
+  mas_gate:
+    status: pass_nonformal_confirmation
+    report: artifacts/reports/mas_gate_rule_budget.md
+    rule_mas_run_id: rule_mas-42-20260817T032541Z-8151de3
+    budget_replay_run_id: fedprox_budget_matched-42-20260817T033134Z-8151de3
+    llm_strict_run: mas_llm-42-20260817T114758Z-8151de3
+  confirmation:
+    status: completed_nonformal
+    next_gate: superseded_by_v2_redesign
+    test_seed42:
+      status: completed_validated
+      v2_role: development_audit_only
+      report: artifacts/reports/test_seed42_frozen_checkpoint_results.md
+      evaluation_mode: frozen_checkpoint_single_test_evaluation
+      runs:
+        centralized_gru: centralized_gru-42-20260817T141030Z-8151de3
+        fedprox: fedprox-42-20260817T141037Z-8151de3
+        fedadam: fedadam-42-20260817T141042Z-8151de3
+        rule_mas: rule_mas-42-20260817T141046Z-8151de3
+        fedprox_budget_matched: fedprox_budget_matched-42-20260817T141050Z-8151de3
+        mas_llm: mas_llm-42-20260817T141054Z-8151de3
+        qfedavg: qfedavg-42-20260817T141058Z-8151de3
+    fedprox_mu001:
+      run_id: fedprox-42-20260817T052846Z-8151de3
+      evaluation_split: val
+      rounds: 30
+      best_validation_macro_mae: 9.469444790352275
+      elapsed_seconds: 3340.69
+      peak_rss_gb: 0.3908
+      minimum_available_memory_observed_gb: 0.1465
+      report: artifacts/reports/confirmation_fedprox_mu001.md
+    interrupted_invalid_run_id: fedprox-42-20260817T033909Z-8151de3
+    centralized_gru_h64_lr0005:
+      run_id: centralized_gru-42-20260817T135100Z-8151de3
+      evaluation_split: val
+      epochs: 30
+      effective_epochs: 10
+      best_validation_macro_mae: 9.369111703103554
+      elapsed_seconds: 787.45
+      peak_rss_gb: 1.4936
+      minimum_available_memory_observed_gb: 0.3211
+      report: artifacts/reports/confirmation_centralized_gru_h64_lr0005.md
+    qfedavg_q01:
+      run_id: qfedavg-42-20260817T064304Z-8151de3
+      status: invalid_implementation_defect
+      superseded_by: D025_qffl_lr_decouple
+      evaluation_split: val
+      rounds: 30
+      best_validation_macro_mae: 58.500309948255136
+      elapsed_seconds: 3376.97
+      peak_rss_gb: 0.3903
+      minimum_available_memory_observed_gb: 0.3197
+      report: artifacts/reports/confirmation_qfedavg_q01.md
+      note: Do not use as a method conclusion; rerun QFedAvg family only with qffl_lr=1.0
+    qfedavg_q01_qffl_lr1:
+      run_id: qfedavg-42-20260817T125813Z-8151de3
+      evaluation_split: val
+      rounds: 30
+      q: 0.1
+      qffl_lr: 1.0
+      best_validation_macro_mae: 9.793918186391613
+      elapsed_seconds: 2753.50
+      peak_rss_gb: 0.3902
+      minimum_available_memory_observed_gb: 0.1483
+      report: artifacts/reports/confirmation_qfedavg_q01_qffl_lr1.md
+    fedadam_lr001:
+      run_id: fedadam-42-20260817T074036Z-8151de3
+      evaluation_split: val
+      rounds: 30
+      best_validation_macro_mae: 9.805316865149255
+      elapsed_seconds: 4408.40
+      peak_rss_gb: 0.3937
+      minimum_available_memory_observed_gb: 0.5237
+      report: artifacts/reports/confirmation_fedadam_lr001.md
+    rule_mas_30:
+      run_id: rule_mas-42-20260817T085700Z-8151de3
+      evaluation_split: val
+      rounds: 30
+      best_validation_macro_mae: 9.654839328255447
+      elapsed_seconds: 5806.79
+      peak_rss_gb: 0.3942
+      minimum_available_memory_observed_gb: 0.5231
+      decision_records: 30
+      report: artifacts/reports/confirmation_rule_mas.md
+    fedprox_budget_matched_30:
+      run_id: fedprox_budget_matched-42-20260817T103434Z-8151de3
+      paired_rule_mas_run_id: rule_mas-42-20260817T085700Z-8151de3
+      evaluation_split: val
+      rounds: 30
+      best_validation_macro_mae: 9.46653976716015
+      elapsed_seconds: 3588.53
+      peak_rss_gb: 0.3981
+      minimum_available_memory_observed_gb: 0.8392
+      decision_trace_match: 30/30
+      report: artifacts/reports/confirmation_fedprox_budget_matched.md
+    mas_llm_30:
+      run_id: mas_llm-42-20260817T114758Z-8151de3
+      evaluation_split: val
+      rounds: 30
+      best_validation_macro_mae: 9.670233005839217
+      elapsed_seconds: 2999.71
+      peak_rss_gb: 0.3883
+      minimum_available_memory_observed_gb: 0.3675
+      decision_sources: 24_llm_4_rule_2_cache_0_fallback
+      report: artifacts/reports/confirmation_mas_llm.md
+  validation_smokes:
+    seasonal_naive: completed_nonformal
+    centralized_gru_one_epoch: completed_nonformal
+    local_gru_one_epoch: completed_nonformal
+    fedprox_twelve_client_sequential_one_round:
+      status: completed_nonformal
+      run_id: fedprox-42-20260817T013258Z-8151de3
+      elapsed_minutes: 1.9
+      observed_training_process_memory_gb: 0.40
+  execution:
+    selected_path: low_memory_sequential_synchronous
+    status: w2_equivalence_and_resource_passed
+    all_clients_per_main_round: 12
+    deterministic_client_order: data/cache/metadata.json
+    full_concurrency: optional_transport_check
+    formal_gate:
+      - real_clientapp_and_strict_strategy
+      - two_client_equivalence
+      - twelve_client_one_round_equivalence
+      - three_round_resource_benchmark
   verified_engineering_evidence:
-    core_test_count: 51
-    core_coverage_percent: 92.67
+    verification_date: 2026-08-18
+    core_test_count: 105
+    skipped_test_count: 1
+    skipped_test_reason: BEIJING_AQ_DATA_DIR_not_configured
+    ruff: passed
+    mypy: passed_50_source_files
+    git_diff_check: passed
+    core_coverage_percent: 91.30
     full_data_test: passed
     two_client_one_round_in_memory: passed
-    twelve_client_one_round: blocked_by_memory
+    flower_launcher_preflight: passed
+    twelve_client_full_concurrency: optional_blocked_by_memory
+    twelve_client_sequential_fedprox_one_round: passed_nonformal
+    strict_sequential_flower_one_round:
+      status: passed_nonformal
+      run_id: fedprox-42-20260817T015616Z-8151de3
+      elapsed_seconds: 118.70
+      validation_macro_mae: 14.37601342457208
+      client_schedule: deterministic_sequential
+    strict_sequential_flower_three_round_benchmark:
+      status: passed_nonformal
+      run_id: fedprox-42-20260817T020304Z-8151de3
+      elapsed_seconds: 328.94
+      peak_rss_gb: 0.39217376708984375
+      minimum_available_memory_gb: 1.3288688659667969
+      all_clients_per_round: 12
 reviews:
   internal_method_review: pending
   integrity_audit: pending
@@ -45,6 +223,18 @@ revision_ledger:
   - date: 2026-08-13
     change: 从旧高速公路静态表格任务迁移到北京12站点时序联邦任务
     reason: 新数据集和论文验证目标
+  - date: 2026-08-17
+    change: 修复报告验证链路、Flower 启动前门禁和参数化 screening 队列
+    reason: 消除无效结果进入报告、门禁失败后继续启动和筛选参数未生效的风险
+  - date: 2026-08-17
+    change: 将主执行路线从12进程全并发调整为12客户端同步顺序执行
+    reason: 一轮实测证明低内存路径可行；并发度不是研究变量，但正式入口仍需通过 Flower 语义等价门禁
+  - date: 2026-08-17
+    change: 完成严格顺序 Flower 运行时、等价性门禁和三轮资源基准
+    reason: 真实 ClientApp/Strict Strategy 已在低内存下运行；四个合成等价案例通过，3轮基准用于筛选时长估算
+  - date: 2026-08-17
+    change: 完成 13 项验证集 screening 并生成可审计候选报告
+    reason: 仅按预注册验证集规则选出各 family 候选；结果仍为 nonformal，待 30 轮确认和协议冻结
 submission_checks:
   template: pending
   anonymity: pending

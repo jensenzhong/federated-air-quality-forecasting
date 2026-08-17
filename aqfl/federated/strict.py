@@ -4,11 +4,57 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 
-from flwr.app import ArrayRecord, Message, MetricRecord
+from flwr.app import ArrayRecord, ConfigRecord, Message, MessageType, MetricRecord, RecordDict
 from flwr.serverapp.strategy import FedAdam, FedAvg, FedProx, QFedAvg
 
 
-class StrictRepliesMixin:
+class DeterministicSchedulingMixin:
+    """Schedule every connected node in a stable order for each round."""
+
+    expected_clients: int
+
+    def _deterministic_messages(
+        self,
+        arrays: ArrayRecord,
+        config: ConfigRecord,
+        grid: object,
+        message_type: str,
+    ) -> Iterable[Message]:
+        node_ids = sorted(int(node_id) for node_id in grid.get_node_ids())  # type: ignore[attr-defined]
+        if len(node_ids) != self.expected_clients:
+            raise RuntimeError(
+                f"Formal round invalid: expected {self.expected_clients} nodes, "
+                f"found {len(node_ids)}"
+            )
+        record = RecordDict({self.arrayrecord_key: arrays, self.configrecord_key: config})  # type: ignore[attr-defined]
+        return list(self._construct_messages(record, node_ids, message_type))  # type: ignore[attr-defined]
+
+    def configure_train(
+        self,
+        server_round: int,
+        arrays: ArrayRecord,
+        config: ConfigRecord,
+        grid: object,
+    ) -> Iterable[Message]:
+        if self.fraction_train == 0.0:  # type: ignore[attr-defined]
+            return []
+        config["server-round"] = server_round
+        return self._deterministic_messages(arrays, config, grid, MessageType.TRAIN)
+
+    def configure_evaluate(
+        self,
+        server_round: int,
+        arrays: ArrayRecord,
+        config: ConfigRecord,
+        grid: object,
+    ) -> Iterable[Message]:
+        if self.fraction_evaluate == 0.0:  # type: ignore[attr-defined]
+            return []
+        config["server-round"] = server_round
+        return self._deterministic_messages(arrays, config, grid, MessageType.EVALUATE)
+
+
+class StrictRepliesMixin(DeterministicSchedulingMixin):
     expected_clients: int
     latest_arrays: ArrayRecord | None
     best_arrays: ArrayRecord | None
@@ -72,6 +118,16 @@ class StrictFedProx(StrictRepliesMixin, FedProx):
         self._init_tracking()
         super().__init__(**kwargs)
 
+    def configure_train(
+        self,
+        server_round: int,
+        arrays: ArrayRecord,
+        config: ConfigRecord,
+        grid: object,
+    ) -> Iterable[Message]:
+        config["proximal-mu"] = self.proximal_mu
+        return super().configure_train(server_round, arrays, config, grid)
+
 
 class StrictQFedAvg(StrictRepliesMixin, QFedAvg):
     def __init__(self, *, expected_clients: int, **kwargs: object) -> None:
@@ -79,9 +135,29 @@ class StrictQFedAvg(StrictRepliesMixin, QFedAvg):
         self._init_tracking()
         super().__init__(**kwargs)
 
+    def configure_train(
+        self,
+        server_round: int,
+        arrays: ArrayRecord,
+        config: ConfigRecord,
+        grid: object,
+    ) -> Iterable[Message]:
+        self.current_arrays = arrays.copy()
+        return super().configure_train(server_round, arrays, config, grid)
+
 
 class StrictFedAdam(StrictRepliesMixin, FedAdam):
     def __init__(self, *, expected_clients: int, **kwargs: object) -> None:
         self.expected_clients = expected_clients
         self._init_tracking()
         super().__init__(**kwargs)
+
+    def configure_train(
+        self,
+        server_round: int,
+        arrays: ArrayRecord,
+        config: ConfigRecord,
+        grid: object,
+    ) -> Iterable[Message]:
+        self.current_arrays = {key: array.numpy() for key, array in arrays.items()}
+        return super().configure_train(server_round, arrays, config, grid)

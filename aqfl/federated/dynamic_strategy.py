@@ -15,9 +15,10 @@ from flwr.serverapp.strategy import FedAvg
 from aqfl.agents.decision import Decision
 from aqfl.federated.aggregation import client_weights
 from aqfl.federated.metrics import aggregate_evaluation_metrics, aggregate_training_metrics
+from aqfl.federated.strict import DeterministicSchedulingMixin
 
 
-class DynamicAggregationStrategy(FedAvg):
+class DynamicAggregationStrategy(DeterministicSchedulingMixin, FedAvg):
     def __init__(
         self,
         *,

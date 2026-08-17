@@ -1,0 +1,5 @@
+method: pafa_bandit
+description: Probe-Then-Act federated control with a LinUCB proposer
+action_library: [safe_default, cautious, adapt_fast, tail_focus]
+probe_enabled: true
+result_status: TBD

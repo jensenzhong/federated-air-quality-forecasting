@@ -1,0 +1,6 @@
+method: pafa_llm_no_probe
+description: PAFA ablation that executes the first valid LLM candidate without a local probe
+action_library: [safe_default, cautious, adapt_fast, tail_focus]
+probe_enabled: false
+strict_llm: true
+result_status: TBD
