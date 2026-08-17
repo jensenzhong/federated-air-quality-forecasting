@@ -233,7 +233,7 @@ Agentic-FL 2026 是概念路线图，不是已经证明胜出的算法基线；F
 1. `C1`：`completed`，定义 `CohortDirective` 与固定广播 Schema；
 2. `C2`：`completed`，让 rule/bandit/LLM proposer 同等消费公共指令；
 3. `C3`：`completed_engineering`，扩展安全黑板的 probe calibration、tail/conflict/成本统计；
-4. `C4`：加入 directive round/replay/privacy 回归；
+4. `C4`：`partial`，已加入 directive round/replay/privacy 回归与 continual AF/AP/AvgPerf 安全聚合评估 helper；仍需接入冻结的 (T_0+11) 任务调度；
 5. `C5`：运行 P1 1/3 轮 smoke；
 6. `B1`：实现 SCAFFOLD、FedDyn；
 7. `B2`：实现/审计 Flash、q-FedAvg SecAgg 路径；

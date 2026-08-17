@@ -17,6 +17,7 @@
 
 - 项目已从 `protocol_v1 frozen/test` 转入 `protocol_v2 draft`。旧结果不删除、不改写，但不再驱动正式主张。
 - v2 创新定义为“诊断—候选—局部反事实探针—安全执行—后验信用”加上 `CohortDirective` 安全黑板反馈的可验证智能体控制闭环，而非 LLM 动态调参。C1 已实现：directive 只含固定无身份字段，并严格绑定上一轮聚合结果；rule、bandit、LLM proposer 均消费相同 directive。
+- 已加入 `aqfl/evaluation/continual.py`，按 benchmark 论文定义 AF/AP/AvgPerf，并提供固定长度任务矩阵的安全聚合 codec；它目前是评估适配器，尚未接入 12 站正式 continual 任务调度。
 - 新确认集首选 KDD Cup 2018 Fresh Air 北京+伦敦多站点数据；必须先冻结 manifest/切分哈希，再产生任何确认结果。
 - 隐私威胁模型见 `docs/11_privacy_threat_model.md`。当前实现要求 SecAgg+ 四阶段每个阶段都收到完整唯一客户端集合的一次回复，并把会话绑定到 run/node/round/stage；相关门禁已通过 2026-08-18 全量验证。C1 新增 public directive 的 schema、round/replay 和动作消费门禁。下一步允许的同进程验证 smoke 仍只是 nonformal 工程证据，test 与正式协议继续 fail-closed。
 - Flower 数值路径处理的是加权完整模型参数的逐坐标量化裁剪，不是更新差分的 L2 裁剪。客户端裁剪风险只以布尔指示量安全聚合；一旦群组指示代表至少一个客户端违规，本轮失效且不得进入协调器或有效工件。

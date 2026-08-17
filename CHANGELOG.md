@@ -5,6 +5,7 @@
 - 为低内存顺序 runner 增加 `--preflight-only`：在调用 ServerApp 或开始客户端训练前验证站点数量、PAFA split、同进程 nonformal 边界、SecAgg+ 数值容量、最小群组、本地 LLM 端点与资源门禁，并只输出去标识化 JSON。
 - 补充与 `pyproject.toml` 既有 MIT 声明一致的 `LICENSE`；当前全量验证为 `108 passed, 1 skipped`，ruff、mypy（51 个源码入口）和 `git diff --check` 通过。
 - C1/C3：加入固定无身份 `CohortDirective`（phase/priority/动作许可/lr cap/上一轮绑定），由安全聚合摘要生成并在下一轮由 rule、contextual bandit、LLM proposer 共同消费；群组摘要新增探针收益、directive 合规、尾部风险和优先级对齐率。
+- 增加 continual benchmark AF/AP/AvgPerf 评估与固定长度任务矩阵 codec；仅允许最小群组后的 SecAgg+ 聚合摘要进入服务器评估，尚未声称已复现论文结果。
 
 ## 0.3.0 - 2026-08-18
 
