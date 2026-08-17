@@ -2,6 +2,8 @@
 
 Source: Hallak & Kem, “Benchmarking Catastrophic Forgetting Mitigation Methods in Federated Time Series Forecasting”, arXiv:2510.21491v1 (2025), accepted at FLTA 2025. Stable sources: [arXiv abstract](https://arxiv.org/abs/2510.21491) and [HTML full text](https://ar5iv.labs.arxiv.org/html/2510.21491). The authors’ implementation is linked from the paper as [cf-federated-timeseries](https://github.com/khaledhallakk/cf-federated-timeseries).
 
+The supplied notebook source was audited locally; the exact windows are frozen in `aqfl/data/continual_schedule.py` and the audit is recorded in `docs/benchmark-source-audit-2510.21491.md`.
+
 ## What is actually benchmarked
 
 - Beijing Multi-Site Air Quality, 12 stations as clients.
