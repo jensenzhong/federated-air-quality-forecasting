@@ -45,6 +45,8 @@ _VERIFIED_Pafa = {
     "pafa_probe_oracle": "probe oracle control with aggregate-only blackboard",
     "pafa_llm": "local LLM proposer with aggregate-only blackboard",
     "pafa_llm_no_probe": "local LLM no-probe ablation with aggregate-only blackboard",
+    "pafa_fedavg": "static FedAvg baseline through the verified aggregate-only PAFA transport",
+    "pafa_fedprox": "static FedProx baseline through the verified aggregate-only PAFA transport",
 }
 
 
@@ -52,7 +54,7 @@ def _build_registry() -> dict[str, BaselineContract]:
     registry: dict[str, BaselineContract] = {
         method: BaselineContract(
             method=method,
-            family="agentic_control",
+            family="secure_baseline" if method.startswith("pafa_fed") else "agentic_control",
             protocol_compatibility="compatible",
             formal_status="verified_secagg",
             requires_client_level_server_signal=False,

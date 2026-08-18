@@ -152,6 +152,7 @@ def main(grid: Grid, context: Context) -> None:
                 event_log=event_log,
             )
             model.load_state_dict(secure_result.best_arrays.to_torch_state_dict())
+            static_secure_baseline = method in {"pafa_fedavg", "pafa_fedprox"}
             summary = {
                 "protocol": "flower_secaggplus_client_local_agents",
                 "execution_mode": execution_mode,
@@ -162,7 +163,9 @@ def main(grid: Grid, context: Context) -> None:
                 "protocol_frozen": bool(context.run_config.get("protocol-frozen", False)),
                 "best_round": secure_result.best_round,
                 "best_validation_macro_mae": secure_result.best_macro_mae,
-                "agentic_v2": True,
+                "agentic_v2": not static_secure_baseline,
+                "secure_baseline": static_secure_baseline,
+                "controller": "static_fedavg_or_fedprox" if static_secure_baseline else "aggregate_blind_local_agents",
                 "agent_location": "client_context_state_only",
                 "secure_aggregation": "flower_secaggplus",
                 "coordinator_visibility": "cohort_summary_only",

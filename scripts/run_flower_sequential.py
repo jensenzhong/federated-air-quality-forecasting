@@ -32,6 +32,8 @@ METHODS = (
     "pafa_probe_oracle",
     "pafa_llm",
     "pafa_llm_no_probe",
+    "pafa_fedavg",
+    "pafa_fedprox",
 )
 
 

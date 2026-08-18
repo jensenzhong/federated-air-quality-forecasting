@@ -27,6 +27,7 @@
 
 - 当前 `scripts/run_sim.py` 只覆盖 FedAvg/FedProx，保留为早期资源对照；正式低内存入口是 `scripts/run_flower_sequential.py`，新增 `--continual` 只允许 PAFA SecAgg+ 路径且 preflight 已通过（12 轮、training_started=false）。v1 test 工件已验证，但不得转用为 v2 的未见确认结果。
 - `aqfl/federated/baseline_contract.py` 已建立强基线协议资格注册：普通 FedAvg/FedProx/FedAdam/QFedAvg 当前仍标为 `pending_secagg_adapter`；SCAFFOLD/FedDyn/Flash 标为 `pending_protocol_audit`；依赖可链接逐客户端信号的方法标为 `incompatible_client_signal`，不得静默改写后进入主表。
+- `pafa_fedprox` 已完成 12 站 1 轮 nonformal aggregate-only smoke（run `pafa_fedprox-42-20260818T010041Z-1fc6755`）：probe fraction=0、12/12、0 failures，工件显式 `agentic_v2=false/secure_baseline=true`；该路径只验证安全基线传输和预算语义，不代表性能胜负。
 - Windows 原生 Ray 后端启动 object store 超时；该路径已放弃，不阻塞顺序运行时主线。
 - 严格 LLM-MAS 已用当前 `DEEPSEEK_API_KEY` 完成 30 轮验证；密钥不写入仓库，后续重跑仍需在运行环境显式提供。
 - v2 顺序 runner 可用于 SecAgg+ 工程验证，但客户端与服务器同进程，因此没有机构隔离资格；新增 probe 的墙钟与峰值 RSS 必须在 P1 重新测量，不能套用 v1 的时长估计。

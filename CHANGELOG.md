@@ -13,6 +13,7 @@
 - C4：任务结束时的本地 task ledger 与固定长度归一化任务矩阵接入 PAFA SecAgg+；服务器仅在最终任务解码聚合 AF/AP/AvgPerf。新增 3-client synthetic continual SecAgg+ 回归和 12 轮 continual preflight（不启动训练）。
 - P1 nonformal：修复 Flower SecAgg+ 参数路径的 tensor state-dict 数组键映射（named/numeric order），并通过真实 12 站 pafa_rule 1 轮与 3 轮 smoke；新增数组 schema 回归测试。该结果不作为正式隐私或性能证据。
 - G2 contract：新增 `baseline_contract.py` 与 fail-closed 测试，分离算法 SecAgg 兼容性、当前实现状态、逐客户端信号依赖和预算类别；SCAFFOLD/FedDyn/Flash 等强基线在安全适配前不会进入正式比较。
+- G2 baseline path：加入 `pafa_fedavg`/`pafa_fedprox` 静态 aggregate-only 控制器（无 probe、无 directive 干预），并通过 12 站 1 轮 FedProx nonformal smoke；服务器工件显式标记 `secure_baseline`，不再冒充 agentic-v2。
 
 ## 0.3.0 - 2026-08-18
 

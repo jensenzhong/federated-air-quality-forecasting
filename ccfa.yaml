@@ -76,6 +76,11 @@ experiments:
     multiseed_v1: paused
     baseline_contract_registry: aqfl/federated/baseline_contract.py
     strong_baseline_gate: pending_secagg_adapters_and_budget_contract
+    pafa_fedprox_smoke:
+      status: passed_nonformal
+      run_id: pafa_fedprox-42-20260818T010041Z-1fc6755
+      cohort: 12_of_12
+      probe_fraction: 0.0
   registry: artifacts/experiment_registry.csv
   screening:
     status: completed_nonformal

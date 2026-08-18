@@ -14,7 +14,7 @@ from flwr.clientapp import ClientApp
 from flwr.common import Code, FitRes, Status
 from flwr.common import recorddict_compat as compat
 
-from aqfl.agents.action_library import build_action_library
+from aqfl.agents.action_library import build_action_library, resolve_action_ids
 from aqfl.agents.executor import ProbeBudget, SafeActionExecutor
 from aqfl.agents.local_runtime import (
     LOCAL_CLIENT_TOKEN,
@@ -24,7 +24,8 @@ from aqfl.agents.local_runtime import (
     record_local_outcome,
     save_private_agent_state,
 )
-from aqfl.agents.v2_contracts import CohortDirective, ProbeOutcome
+from aqfl.agents.v2_contracts import ActionProposal, CohortDirective, ProbeOutcome
+from aqfl.agents.v2_proposers import ActionProposer, RuleActionProposer
 from aqfl.config import load_config, set_seed
 from aqfl.data.continual_dataset import load_station_continual_dataset
 from aqfl.data.dataset import list_stations, load_cache_metadata, load_station_dataset
@@ -233,7 +234,7 @@ def train(msg: Message, context: Context) -> Message:
     proposal = None
     execution = None
     private_state = None
-    proposer = None
+    proposer: ActionProposer | None = None
     contribution_scale = 1.0
     if secure_pafa:
         agentic = config["agentic_v2"]
@@ -243,15 +244,26 @@ def train(msg: Message, context: Context) -> Message:
         private_state = load_private_agent_state(
             context, int(agentic["memory_records_per_client"])
         )
-        proposal, proposer = propose_local_actions(
-            method,
-            round_number,
-            config,
-            private_state,
-            strict_llm=bool(train_config.get("strict-llm", True)),
-            directive=directive,
-        )
-        probe_enabled = bool(train_config.get("probe-enabled", True))
+        static_baseline = method in {"pafa_fedavg", "pafa_fedprox"}
+        if static_baseline:
+            proposer = RuleActionProposer()
+            proposal = ActionProposal(
+                LOCAL_CLIENT_TOKEN,
+                "stable",
+                ("fixed static baseline action",),
+                resolve_action_ids(("safe_default",)),
+                "rule",
+            )
+        else:
+            proposal, proposer = propose_local_actions(
+                method,
+                round_number,
+                config,
+                private_state,
+                strict_llm=bool(train_config.get("strict-llm", True)),
+                directive=directive,
+            )
+        probe_enabled = bool(train_config.get("probe-enabled", True)) and not static_baseline
         outcomes: tuple[ProbeOutcome, ...] = ()
         if probe_enabled:
             outcomes = probe_candidates(
@@ -283,14 +295,12 @@ def train(msg: Message, context: Context) -> Message:
             budget,
             probe_enabled=probe_enabled,
         )
-        execution = apply_cohort_lr_cap(
-            execution,
-            directive.lr_scale_cap,
-        )
+        if not static_baseline:
+            execution = apply_cohort_lr_cap(execution, directive.lr_scale_cap)
         selected = execution.selected_action
         learning_rate = base_lr * selected.lr_scale
         local_epochs = selected.local_epochs
-        proximal_mu = selected.proximal_mu
+        proximal_mu = 0.0 if method == "pafa_fedavg" else selected.proximal_mu
         probe_batches_used = budget.consumed_batches
         contribution_scale = {
             "normal": 1.0,
