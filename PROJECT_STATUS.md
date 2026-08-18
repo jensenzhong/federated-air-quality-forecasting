@@ -10,7 +10,7 @@
 | M3 模型完成 | v1 已审计；v2 重设计 | v1 的 13/13 screening、7 个 30 轮确认及 seed42 test 已保留；量化确认 LLM-MAS 9.6702 未优于预算匹配 FedProx 9.4665，且动作发生塌缩 | 按 `docs/10_llm_mas_v2_research_redesign.md` 实现并通过 P0--P2 |
 | M4 Flower 完成 | 门禁通过 | ServerApp/ClientApp；固定策略；等价门禁 4 案例通过；12 站 FedProx 3 轮真实 ClientApp 基准完成（328.94 秒、峰值 RSS 0.392GB、最低可用内存 1.329GB）；13 项 screening 全部顺序完成 | 保持低内存顺序执行；后续 30 轮确认与正式队列继续记录峰值内存 |
 | M5 MAS 完成 | P1 nonformal smoke 通过 | 动作、探针、执行、记忆已下沉 ClientApp；旧服务器逐客户端策略永久 fail-closed；Flower SecAgg+ 3 客户端与 12 客户端四阶段合成闭环通过；严格全客户端、缺失回复 fail-closed、会话重放/乱序、消息身份、数值容量、量化误差和聚合裁剪指示门禁已通过；真实 12 站 pafa_rule 1/3 轮 smoke 均 12/12、0 failures；真实 12 站、11-task、12-round continual smoke 已完成并产生非零 AF/AP/AvgPerf（证据见 `docs/continual_secagg_smoke_20260818.md`） | 该 smoke 不具备机构隔离资格；安全 test 评估、机构隔离和机构签名的 node->physical-station 绑定仍阻塞 |
-| M6 正式实验 | 暂停 | 已完成 PAFA FedProx/FedAdam/Bandit/Rule 各 10 轮验证集开发运行；修复后 FedAdam 最佳 macro MAE=10.2817，Bandit=10.5097，Rule=10.7087；详细记录见 `docs/p2_secure_baseline_screening_20260818.md` | 先完成探针预算匹配与最强基线调优；当前仍未达到 active goal 的“相对最强基线至少改善1%且配对CI不跨0”门槛；本地 LLM endpoint 未监听 |
+| M6 正式实验 | 暂停 | 已完成 PAFA FedProx/FedAdam/Bandit/Rule 各 10 轮验证集开发运行；修复后 FedAdam 最佳 macro MAE=10.2817，Bandit=10.5097，Rule=10.7087；预算匹配与最强隐私兼容基线合同已冻结，详细记录见 `docs/p2_secure_baseline_screening_20260818.md` 和 `docs/13_v2_reproducibility_contract.md` | 当前尚未达到 active goal 的“相对最强基线至少改善1%且配对CI不跨0”门槛；正式 test、多 seed、机构隔离和新封存确认集仍受门禁；本地 LLM endpoint 未监听 |
 | M7 论文证据包 | 未开始 | 报告和统计生成模块 | 只使用 validated 运行生成表图与结论 |
 
 ## 当前最高优先级
@@ -25,7 +25,7 @@
 
 ## 当前阻塞项
 
-- 当前 `scripts/run_sim.py` 只覆盖 FedAvg/FedProx，保留为早期资源对照；正式低内存入口是 `scripts/run_flower_sequential.py`，新增 `--continual` 只允许 PAFA SecAgg+ 路径且 preflight 已通过（12 轮、training_started=false）。v1 test 工件已验证，但不得转用为 v2 的未见确认结果。
+- 当前 `scripts/run_sim.py` 只覆盖 FedAvg/FedProx，保留为早期资源对照；正式低内存入口是 `scripts/run_flower_sequential.py`，新增 `--continual` 只允许 PAFA SecAgg+ 路径且 preflight 已通过，真实 12 站 continual smoke 亦已通过。v1 test 工件已验证，但不得转用为 v2 的未见确认结果。
 - `aqfl/federated/baseline_contract.py` 已建立强基线协议资格注册：普通 FedAvg/FedProx/FedAdam/QFedAvg 当前仍标为 `pending_secagg_adapter`；SCAFFOLD/FedDyn/Flash 标为 `pending_protocol_audit`；依赖可链接逐客户端信号的方法标为 `incompatible_client_signal`，不得静默改写后进入主表。
 - `pafa_fedprox` 已完成 12 站 1 轮 nonformal aggregate-only smoke（run `pafa_fedprox-42-20260818T010041Z-1fc6755`）：probe fraction=0、12/12、0 failures，工件显式 `agentic_v2=false/secure_baseline=true`；该路径只验证安全基线传输和预算语义，不代表性能胜负。
 - `pafa_fedadam` 已完成 12 站 1 轮 nonformal aggregate-only smoke（run `pafa_fedadam-42-20260818T010639Z-23007a5`）：probe fraction=0、12/12、0 failures，服务器执行独立 moments 更新；该路径只验证 FedAdam 安全适配，不代表性能胜负。

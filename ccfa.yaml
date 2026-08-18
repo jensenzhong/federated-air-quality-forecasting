@@ -21,7 +21,7 @@ artifacts:
 claims:
   central:
     text: MAS-LLM相对计算预算匹配FedProx改善站点宏平均MAE且不损害公平性和鲁棒性
-    status: reopened_after_negative_v1_evidence
+    status: guarded_pending_frozen_confirmation
     required_evidence: v2同动作空间消融、P2验证门槛、新未见确认集、多种子配对统计
   privacy:
     text: 原始数据与客户端智能体状态留在本地；正式方法要求安全聚合；未启用DP时不主张形式化差分隐私
@@ -33,14 +33,15 @@ experiments:
   formal_results: TBD
   v2:
     method: probe_then_act_federated_agent
-    status: p2_validation_screening_complete_budget_match_pending
+    status: g2_contract_frozen_pre_confirmation
     design: docs/10_llm_mas_v2_research_redesign.md
     goal_roadmap: docs/12_goal_driven_mas_fl_roadmap.md
     continual_benchmark_note: docs/benchmark-2510.21491_catastrophic_forgetting.md
     continual_source_audit: docs/benchmark-source-audit-2510.21491.md
     continual_schedule: aqfl/data/continual_schedule.py
     old_seed42_test_role: development_audit_only
-    next_gate: G2_strong_baseline_and_budget_contract
+    reproducibility_contract: docs/13_v2_reproducibility_contract.md
+    next_gate: G3_single_seed_confirmation_after_institutional_gate
     secagg_synthetic_test: passed_three_client_four_stage
     secagg_quantization_test: passed_twelve_client_four_stage_hard_error_bound
     strict_cohort_drop_test: passed_collect_stage_fail_closed

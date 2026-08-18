@@ -29,7 +29,7 @@
 
 ### 尚未完成
 
-- C1--C3 已让 coordinator 通过固定无身份 `CohortDirective` 影响下一轮候选动作、动作许可、优先级和学习率上限；C4 已加入冻结 T0/base-test/T1--T11 的客户端本地 cache 适配器、私有 task ledger、显式 ClientApp 当前任务训练选择和最终任务固定长度矩阵 SecAgg 数组，但真实 12 站 task-level federated smoke 仍未完成，因此尚不能宣称完整协议已在真实任务闭环；
+- C1--C4 已让 coordinator 通过固定无身份 `CohortDirective` 影响下一轮候选动作、动作许可、优先级和学习率上限，并完成冻结 T0/base-test/T1--T11 的客户端本地 cache 适配器、私有下三角 task ledger、显式 ClientApp 当前任务训练选择和最终任务固定长度矩阵 SecAgg 数组；真实 12 站 11-task/12-round continual smoke 已通过，但仍是同进程 nonformal 工程证据，不能替代机构隔离正式运行；
 - `aqfl/federated/baseline_contract.py` 已把 SCAFFOLD、FedDyn、Flash 等强基线登记为 `pending_protocol_audit`；它们尚未在同一 SecAgg+ 协议中实现；
 - FedAWARE、FedAWA、AAggFF、选择性协作等依赖客户端级服务器信号的方法尚未完成协议兼容性判定；
 - station-CVaR、漂移恢复、probe calibration、错误干预率和严格预算账本未全部进入统一报告；
@@ -233,7 +233,7 @@ Agentic-FL 2026 是概念路线图，不是已经证明胜出的算法基线；F
 1. `C1`：`completed`，定义 `CohortDirective` 与固定广播 Schema；
 2. `C2`：`completed`，让 rule/bandit/LLM proposer 同等消费公共指令；
 3. `C3`：`completed_engineering`，扩展安全黑板的 probe calibration、tail/conflict/成本统计；
-4. `C4`：`partial`，已加入 directive round/replay/privacy 回归与 continual AF/AP/AvgPerf 安全聚合评估 helper；仍需接入冻结的 (T_0+11) 任务调度；
+4. `C4`：`completed_nonformal`，directive round/replay/privacy 回归、冻结的 (T_0+11) 任务调度、客户端本地 ledger 和 continual AF/AP/AvgPerf SecAgg+ 固定数组均已接入并通过 12 站 smoke；
 5. `C5`：`passed_nonformal`，真实 12 站 pafa_rule 1/3 轮 smoke 通过；
 6. `B1`：实现 SCAFFOLD、FedDyn；
 7. `B2`：实现/审计 Flash、q-FedAvg SecAgg 路径；
@@ -242,4 +242,4 @@ Agentic-FL 2026 是概念路线图，不是已经证明胜出的算法基线；F
 10. `D1`：冻结 KDD Fresh Air manifest 与确认切分；
 11. `X1`：按 G3--G5 执行实验，不越级运行正式 test。
 
-当前下一项是 `C4/P1`：directive replay/privacy 回归与 12 站 1--3 轮 nonformal smoke，不是直接追求多 seed 结果。
+当前下一项是 `G2`：冻结强隐私兼容基线、预算公平合同和统计门槛；在机构隔离与封存确认集可用前，继续禁止正式 test 和多 seed 主实验。

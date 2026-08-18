@@ -1,10 +1,10 @@
 # 预注册实验协议
 
-状态：`v1_closed; v2_implementation_pre_P1`。v1 已完成 seed42 test，但结果触发了方法重设计；原冻结协议及结果完整保留，只能作为 v1 结论和 v2 开发审计，不能作为 v2 的未见确认测试。
+状态：`v1_closed; v2_contract_frozen_pre_confirmation`。v1 已完成 seed42 test，但结果触发了方法重设计；原冻结协议及结果完整保留，只能作为 v1 结论和 v2 开发审计，不能作为 v2 的未见确认测试。v2 的 canonical 强基线、预算和统计合同见 `docs/13_v2_reproducibility_contract.md`；正式 test/多 seed 仍受机构隔离和封存确认门禁约束。
 
 v2 方法、门槛和评测设计见 `docs/10_llm_mas_v2_research_redesign.md`。在 v2 P2 通过并重新冻结前，暂停原 seeds 123/456/789/2024 正式队列。
 
-v2 已通过 3 客户端 Flower SecAgg+ 合成工程闭环，并完成真实 12 站 pafa_rule 1/3 轮 nonformal P1 smoke（`protocol_frozen=false/evaluation_split=val`，每轮 12/12、0 failures）；该 smoke 仅证明 ClientApp/SecAgg+ 工程闭环，不是正式隐私或性能证据。安全聚合 test 指标协议与机构隔离 ClientApp 未验证前，test 和正式运行均 fail-closed。v2 主要比较将改为同 SecAgg+、站点等权和总 epoch 预算下的 `pafa_llm` 对 `pafa_bandit`、`pafa_rule` 与预算匹配 FedProx，不沿用 v1 的不等价控制组。
+v2 已通过 3 客户端 Flower SecAgg+ 合成工程闭环，并完成真实 12 站 pafa_rule 1/3 轮以及 11-task/12-round continual nonformal smoke（`protocol_frozen=false/evaluation_split=val`，每轮 12/12、0 failures）；这些 smoke 仅证明 ClientApp/SecAgg+ 工程闭环，不是正式隐私或性能证据。安全聚合 test 指标协议与机构隔离 ClientApp 未验证前，test 和正式运行均 fail-closed。v2 主要比较冻结为同 SecAgg+、站点等权和总 probe/local-epoch 预算下的 `pafa_llm` 对最强隐私兼容 FedAdam、同动作空间 `pafa_bandit`/`pafa_rule` 与 `pafa_fedprox_budget_matched`，不沿用 v1 的不等价控制组。
 
 冻结记录（2026-08-17，Asia/Shanghai）：Git 基线 `8151de3`；`configs/base.yaml` canonical SHA-256 `9f6b55a6b54e80077e3280b2b7c9b6c3b0fc3bec4699773c9cefa24987faaab0`。各运行的 resolved config、环境和数据 manifest 已随工件保存；当前工作区变更仍需在提交时一并归档，不能把 Git 基线单独解释为全部源代码快照。
 
@@ -16,7 +16,7 @@ v2 已通过 3 客户端 Flower SecAgg+ 合成工程闭环，并完成真实 12 
 - 种子：42、123、456、789、2024。
 - 主指标：站点宏平均 MAE。
 - 次指标：微 MAE、RMSE、sMAPE、R²、最差站 MAE、站点 MAE std/CV、高污染 MAE、通信轮/字节、时间、峰值内存、LLM 成本。
-- 主要比较：MAS-LLM − FedProx-budget-matched。
+- 主要比较：`pafa_llm` − `pafa_fedadam`（最强隐私兼容传统基线），并以 `pafa_fedprox_budget_matched` 和同动作空间 bandit/rule 作为预算与机制控制。
 
 ## 固定执行语义
 
