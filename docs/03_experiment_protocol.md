@@ -4,7 +4,7 @@
 
 v2 方法、门槛和评测设计见 `docs/10_llm_mas_v2_research_redesign.md`。在 v2 P2 通过并重新冻结前，暂停原 seeds 123/456/789/2024 正式队列。
 
-v2 已通过 3 客户端 Flower SecAgg+ 合成工程闭环，但尚未运行 12 站 P1。当前 `pafa_*` 只允许 `protocol_frozen=false/evaluation_split=val` 的 nonformal 隐私 smoke；安全聚合 test 指标协议与机构隔离 ClientApp 未验证前，test 和正式运行均 fail-closed。v2 主要比较将改为同 SecAgg+、站点等权和总 epoch 预算下的 `pafa_llm` 对 `pafa_bandit`、`pafa_rule` 与预算匹配 FedProx，不沿用 v1 的不等价控制组。
+v2 已通过 3 客户端 Flower SecAgg+ 合成工程闭环，并完成真实 12 站 pafa_rule 1/3 轮 nonformal P1 smoke（`protocol_frozen=false/evaluation_split=val`，每轮 12/12、0 failures）；该 smoke 仅证明 ClientApp/SecAgg+ 工程闭环，不是正式隐私或性能证据。安全聚合 test 指标协议与机构隔离 ClientApp 未验证前，test 和正式运行均 fail-closed。v2 主要比较将改为同 SecAgg+、站点等权和总 epoch 预算下的 `pafa_llm` 对 `pafa_bandit`、`pafa_rule` 与预算匹配 FedProx，不沿用 v1 的不等价控制组。
 
 冻结记录（2026-08-17，Asia/Shanghai）：Git 基线 `8151de3`；`configs/base.yaml` canonical SHA-256 `9f6b55a6b54e80077e3280b2b7c9b6c3b0fc3bec4699773c9cefa24987faaab0`。各运行的 resolved config、环境和数据 manifest 已随工件保存；当前工作区变更仍需在提交时一并归档，不能把 Git 基线单独解释为全部源代码快照。
 
@@ -30,7 +30,7 @@ v2 已通过 3 客户端 Flower SecAgg+ 合成工程闭环，但尚未运行 12 
 
 ## 基线与调参预算
 
-确定性基线为 Persistence、Seasonal Naive。学习基线为 Local-only GRU、Centralized GRU、FedAvg、FedProx、QFedAvg、FedAdam、Rule-MAS、MAS-LLM、FedProx-budget-matched。
+确定性基线为 Persistence、Seasonal Naive。学习基线为 Local-only GRU、Centralized GRU、FedAvg、FedProx、QFedAvg、FedAdam、Rule-MAS、MAS-LLM、FedProx-budget-matched。SCAFFOLD、FedDyn、Flash 等强基线在进入主表前必须完成 SecAgg+/本地状态/预算兼容性审计；尚未通过审计的方法不得静默替换为不等价实现。
 
 只用 seed=42 和验证集：FedProx μ `{0.001,0.01,0.1}`；QFedAvg q `{0.1,1,5}`；FedAdam server_lr `{0.01,0.1,1}`。架构网格见方法规格。所有入选参数在主实验前写入决策日志并冻结。
 
