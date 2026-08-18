@@ -129,7 +129,12 @@ experiments:
       preflight: passed
       endpoint: http://127.0.0.1:11434/v1
       endpoint_listening: false
-      run_status: not_started_privacy_gate
+      development_stub_script: scripts/local_llm_stub_server.py
+      smoke_run_id: pafa_llm-42-20260818T040611Z-c8e2db6
+      smoke_clients: 12
+      smoke_source_rate_llm: 1.0
+      smoke_directive_compliance: 1.0
+      run_status: transport_smoke_only_real_model_pending
   registry: artifacts/experiment_registry.csv
   screening:
     status: completed_nonformal

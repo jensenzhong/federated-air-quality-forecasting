@@ -2,6 +2,8 @@
 
 This document records nonformal, validation-only, single-seed development runs. It is not a privacy certification, a test result, or a paper claim. All runs used the low-memory sequential Flower runtime with 12/12 clients and the SecAgg+ PAFA path.
 
+The LLM transport was separately exercised with the development-only localhost stub in `scripts/local_llm_stub_server.py`; that run is a protocol smoke, not an LLM quality result.
+
 ## Comparable runs
 
 | Method | Run ID | Best round | Best station-macro MAE ↓ | High-pollution MAE ↓ | Mean probe fraction | Mean local train seconds | Status |
@@ -14,6 +16,10 @@ This document records nonformal, validation-only, single-seed development runs. 
 | PAFA probe oracle | `pafa_probe_oracle-42-20260818T033649Z-37754fb` | 9 | 10.5626 | 29.3184 | 1.000 | 8.1681 | mechanism upper-bound control |
 
 The controlled hybrid smoke `pafa_bandit_fedadam-42-20260818T025932Z-90200bf` was stopped after 3 rounds: best macro MAE `12.4955` (round 2), versus `11.4939` for the static FedAdam run at round 3. It is retained as a rejected development candidate; no 10-round result is claimed.
+
+The actual local LLM proposer transport smoke `pafa_llm-42-20260818T040611Z-c8e2db6` completed one validation round with 12/12 clients, `source_rate_llm=1.0`, directive compliance `1.0`, and no client metrics persisted on the server. It used only the localhost development stub and must not be interpreted as evidence about a real LLM model.
+
+The earlier `pafa_llm-42-20260818T040320Z-c8e2db6` attempt is invalid because the host HTTP proxy intercepted localhost and returned 502; it is excluded from all evidence.
 
 Directive compliance was 1.0 on the valid runs, clipping-violation rate was 0, and each SecAgg+ round reported 12 results and 0 failures. The probe/action statistics are aggregate cohort summaries; no client identity or client trajectory was persisted on the server.
 

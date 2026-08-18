@@ -35,6 +35,7 @@
 - 探针预算匹配 FedProx 控制已完成 10 轮：`pafa_fedprox_budget_matched-42-20260818T031349Z-323da88`，best macro MAE=10.5280、高污染 MAE=29.6761、probe fraction=1.0。Bandit 相对该控制仅改善约0.17% macro MAE且高污染指标更差，未达到预注册的1%门槛。
 - `pafa_probe_oracle-42-20260818T033649Z-37754fb` 10 轮机制上界 smoke 已完成：best macro MAE=10.5626、高污染 MAE=29.3184；它仍未超过 FedAdam 的平均 MAE，但取得当前最佳尾部指标，支持把 v2 结论转向风险敏感/公平性收益。
 - `pafa_llm` 已通过静态隐私 preflight，但配置的 loopback `127.0.0.1:11434` 当前未监听；按政策未启动任何客户端级 LLM 请求，也未退回公网 DeepSeek。
+- `pafa_llm-42-20260818T040611Z-c8e2db6` 已用 development-only localhost OpenAI-compatible stub 完成 1 轮真实 ClientApp/SecAgg+ smoke：12/12、0 failures、`source_rate_llm=1.0`、directive compliance=1.0；该工件只证明本地传输与 proposer 闭环，不是 LLM 性能结果。此前 `040320Z` 工件因 HTTP proxy 误拦 localhost 返回 502，已排除。
 - Windows 原生 Ray 后端启动 object store 超时；该路径已放弃，不阻塞顺序运行时主线。
 - 严格 LLM-MAS 已用当前 `DEEPSEEK_API_KEY` 完成 30 轮验证；密钥不写入仓库，后续重跑仍需在运行环境显式提供。
 - v2 顺序 runner 可用于 SecAgg+ 工程验证，但客户端与服务器同进程，因此没有机构隔离资格；新增 probe 的墙钟与峰值 RSS 必须在 P1 重新测量，不能套用 v1 的时长估计。
