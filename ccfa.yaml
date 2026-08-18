@@ -109,6 +109,12 @@ experiments:
         high_pollution_mae_at_best_round: 29.676055908203125
         mean_probe_fraction: 1.0
         status: nonformal_validation_only
+      pafa_probe_oracle:
+        run_id: pafa_probe_oracle-42-20260818T033649Z-37754fb
+        best_validation_macro_mae: 10.562578837076822
+        high_pollution_mae_at_best_round: 29.318379402160645
+        mean_probe_fraction: 1.0
+        status: nonformal_validation_only
       pafa_rule:
         run_id: pafa_rule-42-20260818T022928Z-28f691b
         best_validation_macro_mae: 10.70868174235026
