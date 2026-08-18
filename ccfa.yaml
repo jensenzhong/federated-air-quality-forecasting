@@ -55,6 +55,8 @@ experiments:
     clientapp_continual_adapter: partial_local_train_selection
     local_continual_cache_adapter: implemented_client_local_only
     local_task_ledger: implemented_private_matrix
+    continual_task_matrix_secagg: passed_synthetic_final_task_only
+    continual_schedule_preflight: passed_12_rounds_no_training
     p1_continual_smoke: blocked_until_clientapp_adapter
     p1_runner_preflight: passed_twelve_station_no_training
     formal_test_status: blocked_until_secure_evaluation_and_isolated_clients

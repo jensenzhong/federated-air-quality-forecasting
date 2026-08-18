@@ -89,6 +89,17 @@ def main(grid: Grid, context: Context) -> None:
         "execution_mode": str(context.run_config.get("execution-mode", "full_concurrency")),
         "probe_enabled": method != "pafa_llm_no_probe",
     }
+    if bool(context.run_config.get("continual-enabled", False)):
+        config.setdefault("continual", {}).update(
+            {
+                "enabled": True,
+                "task_count": int(context.run_config.get("continual-task-count", 11)),
+                "base_rounds": int(context.run_config.get("continual-base-rounds", 1)),
+                "rounds_per_task": int(
+                    context.run_config.get("continual-rounds-per-task", 1)
+                ),
+            }
+        )
     set_seed(seed)
     expected_clients = len(list_stations(config))
     if expected_clients != int(config["federated"]["num_clients"]):
@@ -161,6 +172,7 @@ def main(grid: Grid, context: Context) -> None:
                 "final_validation": secure_result.round_metrics[-1]
                 if secure_result.round_metrics
                 else {},
+                "continual_metrics": secure_result.continual_metrics or "TBD",
             }
             _write_grid_telemetry(grid, artifacts.path / "system_metrics.jsonl")
             artifacts.finalize(

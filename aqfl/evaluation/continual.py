@@ -12,6 +12,8 @@ from typing import Any
 
 import numpy as np
 
+CONTINUAL_METRIC_SCALE = 100.0
+
 
 @dataclass(frozen=True)
 class ContinualMetricSummary:
@@ -40,6 +42,21 @@ class LocalContinualTaskLedger:
         self.task_count = int(task_count)
         self._matrix = np.full((self.task_count, self.task_count), np.nan, dtype=np.float64)
 
+    @classmethod
+    def from_private_matrix(cls, matrix: np.ndarray) -> LocalContinualTaskLedger:
+        values = np.asarray(matrix, dtype=np.float64)
+        if values.ndim != 2 or values.shape[0] != values.shape[1] or values.shape[0] < 2:
+            raise ValueError("Private continual task matrix must be square")
+        if np.any(np.isinf(values)) or np.any(values < 0):
+            raise ValueError("Private continual task matrix contains invalid values")
+        ledger = cls(int(values.shape[0]))
+        ledger._matrix = values.copy()
+        return ledger
+
+    def private_matrix(self) -> np.ndarray:
+        """Return a local-only snapshot, retaining incomplete NaN cells."""
+        return self._matrix.copy()
+
     def record(self, task_id: int, evaluated_task_id: int, metric: float) -> None:
         if not 1 <= task_id <= self.task_count:
             raise ValueError("Unknown continual task ID")
@@ -65,7 +82,7 @@ class LocalContinualTaskLedger:
 
     def encode_for_secagg(self) -> np.ndarray:
         """Return only the fixed-size numeric payload suitable for SecAgg+."""
-        return encode_task_matrix(self.matrix())
+        return encode_task_matrix(self.matrix() / CONTINUAL_METRIC_SCALE)
 
 
 def _validate_matrix(matrix: np.ndarray) -> np.ndarray:

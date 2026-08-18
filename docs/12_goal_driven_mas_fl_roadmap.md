@@ -29,7 +29,7 @@
 
 ### 尚未完成
 
-- C1--C3 已让 coordinator 通过固定无身份 `CohortDirective` 影响下一轮候选动作、动作许可、优先级和学习率上限；C4 已加入冻结 T0/base-test/T1--T11 的客户端本地 cache 适配器、私有 task ledger 和显式 ClientApp 当前任务训练选择，但任务级 federated 调度、任务矩阵 SecAgg 数组和 P1 smoke 仍未完成，因此尚不能宣称完整协议已在真实任务闭环；
+- C1--C3 已让 coordinator 通过固定无身份 `CohortDirective` 影响下一轮候选动作、动作许可、优先级和学习率上限；C4 已加入冻结 T0/base-test/T1--T11 的客户端本地 cache 适配器、私有 task ledger、显式 ClientApp 当前任务训练选择和最终任务固定长度矩阵 SecAgg 数组，但真实 12 站 task-level federated smoke 仍未完成，因此尚不能宣称完整协议已在真实任务闭环；
 - SCAFFOLD、FedDyn、Flash 等隐私兼容强基线尚未在同一协议中实现；
 - FedAWARE、FedAWA、AAggFF、选择性协作等依赖客户端级服务器信号的方法尚未完成协议兼容性判定；
 - station-CVaR、漂移恢复、probe calibration、错误干预率和严格预算账本未全部进入统一报告；

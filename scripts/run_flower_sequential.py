@@ -55,6 +55,12 @@ def build_run_config(args: argparse.Namespace) -> dict[str, Any]:
         "protocol-frozen": args.protocol_frozen,
         "client-state-isolated": False,
         "execution-mode": "low_memory_sequential",
+        "continual-enabled": bool(getattr(args, "continual", False)),
+        "continual-task-count": int(getattr(args, "continual_task_count", 11)),
+        "continual-base-rounds": int(getattr(args, "continual_base_rounds", 1)),
+        "continual-rounds-per-task": int(
+            getattr(args, "continual_rounds_per_task", 1)
+        ),
     }
 
 
@@ -72,6 +78,18 @@ def validate_preflight(
 
     method = str(run_config["method"])
     is_pafa = method.startswith("pafa_")
+    if bool(run_config.get("continual-enabled", False)) and not is_pafa:
+        raise RuntimeError(
+            "Continual task scheduling is currently gated to the SecAgg+ PAFA path"
+        )
+    if bool(run_config.get("continual-enabled", False)):
+        expected_rounds = int(run_config["continual-base-rounds"]) + int(
+            run_config["continual-task-count"]
+        ) * int(run_config["continual-rounds-per-task"])
+        if int(run_config["num-server-rounds"]) != expected_rounds:
+            raise RuntimeError(
+                "Continual run requires base_rounds + task_count * rounds_per_task rounds"
+            )
     quantization_step: float | None = None
     if is_pafa:
         enforce_pafa_run_mode(
@@ -112,6 +130,17 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     config = load_config(args.config_path)
     stations = list_stations(config)
     run_config = build_run_config(args)
+    if bool(getattr(args, "continual", False)):
+        config.setdefault("continual", {}).update(
+            {
+                "enabled": True,
+                "task_count": int(getattr(args, "continual_task_count", 11)),
+                "base_rounds": int(getattr(args, "continual_base_rounds", 1)),
+                "rounds_per_task": int(
+                    getattr(args, "continual_rounds_per_task", 1)
+                ),
+            }
+        )
     report = validate_preflight(config, run_config, stations)
     expected_clients = int(config["federated"]["num_clients"])
     node_configs = {
@@ -159,6 +188,14 @@ def main() -> None:
     parser.add_argument("--budget-trace", default="")
     parser.add_argument("--evaluation-split", choices=("val", "test"), default="val")
     parser.add_argument("--protocol-frozen", action="store_true")
+    parser.add_argument(
+        "--continual",
+        action="store_true",
+        help="Enable the frozen T0+T1..T11 PAFA continual schedule (training gate).",
+    )
+    parser.add_argument("--continual-task-count", type=int, default=11)
+    parser.add_argument("--continual-base-rounds", type=int, default=1)
+    parser.add_argument("--continual-rounds-per-task", type=int, default=1)
     parser.add_argument("--strict-llm", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument(
         "--enforce-resource-check",

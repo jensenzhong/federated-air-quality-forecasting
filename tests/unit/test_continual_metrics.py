@@ -56,6 +56,9 @@ def test_local_task_ledger_is_complete_before_secagg_encoding() -> None:
     ledger.record(2, 2, 1.5)
     vector = ledger.encode_for_secagg()
     assert vector.shape == (4,)
+    assert np.array_equal(vector, np.asarray([0.01, 0.02, 0.03, 0.015], dtype=np.float32))
     assert np.array_equal(ledger.matrix(), np.asarray([[1.0, 2.0], [3.0, 1.5]]))
+    restored = LocalContinualTaskLedger.from_private_matrix(ledger.private_matrix())
+    assert np.array_equal(restored.matrix(), ledger.matrix())
     with pytest.raises(RuntimeError, match="overwrite"):
         ledger.record(1, 1, 9.0)

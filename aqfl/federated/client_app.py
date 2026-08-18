@@ -28,9 +28,11 @@ from aqfl.config import load_config, set_seed
 from aqfl.data.continual_dataset import load_station_continual_dataset
 from aqfl.data.dataset import list_stations, load_cache_metadata, load_station_dataset
 from aqfl.data.preprocessing import GlobalScalerState
+from aqfl.evaluation.continual import LocalContinualTaskLedger
 from aqfl.federated.probe_runtime import probe_candidates
 from aqfl.federated.resources import limit_client_threads
 from aqfl.federated.secure_aggregation import (
+    COHORT_CONTINUAL_TASK_MATRIX_ARRAY,
     COHORT_SUMMARY_ARRAY,
     CohortSummaryCodec,
     is_verified_secagg_collect,
@@ -41,6 +43,8 @@ from aqfl.models.training import evaluate_model, train_local_model
 
 limit_client_threads(1)
 app = ClientApp(mods=[private_secaggplus_mod])
+
+LOCAL_CONTINUAL_LEDGER_ARRAY = "__pafa_local_continual_task_ledger__"
 
 
 def _config(context: Context) -> dict[str, Any]:
@@ -132,9 +136,31 @@ def _continual_task_id(
         return None
     task_id = int(train_config.get("continual-task-id", -1))
     task_count = int(train_config.get("continual-task-count", settings.get("task_count", 11)))
-    if task_id < 0 or task_id > task_count or task_count < 1 or task_count > 11:
+    if task_id < 0 or task_id > task_count or task_count < 2 or task_count > 11:
         raise RuntimeError("Continual ClientApp request has an invalid task ID")
     return task_id
+
+
+def _load_local_continual_ledger(
+    context: Context,
+    task_count: int,
+) -> LocalContinualTaskLedger:
+    record = context.state.array_records.get(LOCAL_CONTINUAL_LEDGER_ARRAY)
+    if record is None:
+        return LocalContinualTaskLedger(task_count)
+    arrays = record.to_numpy_ndarrays()
+    if len(arrays) != 1:
+        raise RuntimeError("Local continual ledger state has an unexpected shape")
+    return LocalContinualTaskLedger.from_private_matrix(arrays[0])
+
+
+def _save_local_continual_ledger(
+    context: Context,
+    ledger: LocalContinualTaskLedger,
+) -> None:
+    context.state.array_records[LOCAL_CONTINUAL_LEDGER_ARRAY] = ArrayRecord(
+        {"matrix": Array(ledger.private_matrix().astype(np.float32, copy=False))}
+    )
 
 
 @app.train()
@@ -155,6 +181,14 @@ def train(msg: Message, context: Context) -> Message:
     model.load_state_dict(incoming)
     before = copy.deepcopy(model.state_dict())
     continual_task_id = _continual_task_id(config, train_config)
+    continual_settings = config.get("continual", {})
+    continual_task_count = int(
+        train_config.get("continual-task-count", continual_settings.get("task_count", 11))
+    )
+    continual_task_final = bool(train_config.get("continual-task-final", False))
+    continual_ledger: LocalContinualTaskLedger | None = None
+    if continual_task_id is not None and continual_task_id > 0:
+        continual_ledger = _load_local_continual_ledger(context, continual_task_count)
     if continual_task_id is None:
         train_dataset = load_station_dataset(config, station, "train")
     else:
@@ -262,6 +296,36 @@ def train(msg: Message, context: Context) -> Message:
         high_pollution_mae = float(val_metrics["mae"])
     elapsed = time.perf_counter() - started
     update_norm = _update_norm(before, model.state_dict())
+    continual_task_matrix_vector: np.ndarray | None = None
+    if (
+        continual_task_id is not None
+        and continual_task_id > 0
+        and continual_task_final
+    ):
+        if continual_ledger is None:
+            raise RuntimeError("Continual ledger was not initialized for a task checkpoint")
+        for evaluated_task_id in range(1, continual_task_id + 1):
+            task_test_dataset = load_station_continual_dataset(
+                config,
+                station,
+                evaluated_task_id,
+                "test",
+                train_ratio=float(continual_settings.get("train_ratio", 0.8)),
+            )
+            task_metrics, _ = evaluate_model(
+                model,
+                task_test_dataset,
+                scaler,
+                scaler.pollution_p90,
+            )
+            continual_ledger.record(
+                continual_task_id,
+                evaluated_task_id,
+                float(task_metrics["mae"]),
+            )
+        _save_local_continual_ledger(context, continual_ledger)
+        if continual_task_id == continual_task_count:
+            continual_task_matrix_vector = continual_ledger.encode_for_secagg()
     if secure_pafa:
         if private_state is None or proposer is None or proposal is None or execution is None:
             raise RuntimeError("Client-private PAFA state was not initialized")
@@ -315,6 +379,15 @@ def train(msg: Message, context: Context) -> Message:
         )
         arrays = ArrayRecord(model.state_dict())
         arrays[COHORT_SUMMARY_ARRAY] = Array(summary_vector)
+        if continual_task_id is not None:
+            if continual_task_matrix_vector is None:
+                continual_task_matrix_vector = np.zeros(
+                    continual_task_count * continual_task_count,
+                    dtype=np.float32,
+                )
+            arrays[COHORT_CONTINUAL_TASK_MATRIX_ARRAY] = Array(
+                continual_task_matrix_vector
+            )
         fitres = FitRes(
             status=Status(Code.OK, ""),
             parameters=compat.arrayrecord_to_parameters(arrays, keep_input=True),

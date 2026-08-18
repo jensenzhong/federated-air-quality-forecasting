@@ -94,3 +94,27 @@ def test_preflight_rejects_public_client_level_llm() -> None:
     run_config = runner.build_run_config(_args(method="pafa_llm"))
     with pytest.raises(RuntimeError, match="external LLM endpoint"):
         runner.validate_preflight(config, run_config, ["a", "b"])
+
+
+def test_preflight_continual_schedule_requires_exact_round_budget() -> None:
+    run_config = runner.build_run_config(
+        _args(continual=True, rounds=12, continual_task_count=11)
+    )
+    report = runner.validate_preflight(_config(), run_config, ["a", "b"])
+    assert report["training_started"] is False
+    with pytest.raises(RuntimeError, match="requires base_rounds"):
+        runner.validate_preflight(
+            _config(),
+            runner.build_run_config(
+                _args(continual=True, rounds=11, continual_task_count=11)
+            ),
+            ["a", "b"],
+        )
+    with pytest.raises(RuntimeError, match="gated"):
+        runner.validate_preflight(
+            _config(),
+            runner.build_run_config(
+                _args(method="fedprox", continual=True, rounds=12)
+            ),
+            ["a", "b"],
+        )

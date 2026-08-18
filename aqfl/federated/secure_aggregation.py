@@ -47,8 +47,15 @@ from aqfl.agents.v2_contracts import (
     DirectivePriority,
     ExecutionDecision,
 )
+from aqfl.data.continual_schedule import continual_task_id_for_round
+from aqfl.evaluation.continual import (
+    CONTINUAL_METRIC_SCALE,
+    decode_task_matrix_sum,
+    secure_aggregate_continual_metrics,
+)
 
 COHORT_SUMMARY_ARRAY = "__pafa_cohort_summary__"
+COHORT_CONTINUAL_TASK_MATRIX_ARRAY = "__pafa_continual_task_matrix__"
 SECAGG_COLLECT_GUARD = "__pafa_secagg_collect_guard__"
 SECAGG_SESSION_GUARD = "__pafa_secagg_session_guard__"
 ACTION_IDS = ("safe_default", "cautious", "adapt_fast", "tail_focus")
@@ -503,6 +510,9 @@ class SecureAggregateOnlyFedAvg(FedAvg):
         model_array_count: int,
         coordinator: AggregateCoordinatorAgent,
         on_fit_config_fn: Callable[[int], dict[str, Any]],
+        continual_task_count: int | None = None,
+        continual_base_rounds: int = 1,
+        continual_rounds_per_task: int = 1,
     ) -> None:
         super().__init__(
             fraction_fit=1.0,
@@ -517,7 +527,11 @@ class SecureAggregateOnlyFedAvg(FedAvg):
         self.expected_node_ids = frozenset(expected_node_ids)
         self.model_array_count = model_array_count
         self.coordinator = coordinator
+        self.continual_task_count = continual_task_count
+        self.continual_base_rounds = continual_base_rounds
+        self.continual_rounds_per_task = continual_rounds_per_task
         self.latest_summary: dict[str, float] | None = None
+        self.latest_continual_metrics: dict[str, float] | None = None
         self.last_server_round = 0
 
     def aggregate_fit(self, server_round: int, results: list[Any], failures: list[Any]) -> Any:
@@ -536,9 +550,36 @@ class SecureAggregateOnlyFedAvg(FedAvg):
         if any(result.num_examples != 1 or result.metrics for _, result in results):
             raise RuntimeError("Client-level metadata survived the SecAgg+ privacy sanitizer")
         arrays = parameters_to_ndarrays(results[0][1].parameters)
-        if len(arrays) != self.model_array_count + 1:
-            raise RuntimeError("SecAgg+ result does not contain exactly one cohort summary vector")
-        self.latest_summary = CohortSummaryCodec.decode(arrays[-1])
+        expected_array_count = self.model_array_count + 1 + (
+            1 if self.continual_task_count is not None else 0
+        )
+        if len(arrays) != expected_array_count:
+            raise RuntimeError("SecAgg+ result has an unexpected fixed array layout")
+        summary_index = self.model_array_count
+        self.latest_summary = CohortSummaryCodec.decode(arrays[summary_index])
+        self.latest_continual_metrics = None
+        if self.continual_task_count is not None:
+            task_id = continual_task_id_for_round(
+                server_round,
+                base_rounds=self.continual_base_rounds,
+                rounds_per_task=self.continual_rounds_per_task,
+                task_count=self.continual_task_count,
+            )
+            if task_id == self.continual_task_count:
+                summed = decode_task_matrix_sum(
+                    np.asarray(arrays[-1], dtype=np.float64)
+                    * float(self.expected_clients),
+                    self.continual_task_count,
+                ) * CONTINUAL_METRIC_SCALE
+                self.latest_continual_metrics = secure_aggregate_continual_metrics(
+                    summed,
+                    self.expected_clients,
+                    minimum_cohort_size=self.coordinator.minimum_cohort_size,
+                ).to_dict()
+            elif not np.allclose(arrays[-1], 0.0, atol=1e-6):
+                raise RuntimeError(
+                    "Continual task matrix must remain zero before the final task"
+                )
         if (
             self.latest_summary["cohort_clipping_violation_rate"]
             > 0.5 / self.expected_clients
@@ -548,7 +589,16 @@ class SecureAggregateOnlyFedAvg(FedAvg):
         self.last_server_round = server_round
         metrics = {key: float(value) for key, value in self.latest_summary.items()}
         metrics["cohort_size"] = len(results)
-        return ndarrays_to_parameters(arrays[:-1]), metrics
+        metrics = dict(metrics)
+        if self.latest_continual_metrics is not None:
+            metrics.update(
+                {
+                    f"continual_{key}": float(value)
+                    for key, value in self.latest_continual_metrics.items()
+                    if key != "task_count"
+                }
+            )
+        return ndarrays_to_parameters(arrays[: self.model_array_count]), metrics
 
 
 @dataclass
@@ -559,6 +609,7 @@ class SecurePafaResult:
     best_macro_mae: float
     round_metrics: list[dict[str, Any]]
     coordinator_events: list[dict[str, Any]]
+    continual_metrics: dict[str, float] | None
 
 
 def run_secure_pafa(
@@ -586,9 +637,23 @@ def run_secure_pafa(
     privacy = config["privacy"]["secaggplus"]
     validate_secagg_numeric_policy(privacy, expected_clients)
     strict_grid = StrictCohortGrid(grid, set(node_ids))
+    continual = config.get("continual", {})
+    continual_enabled = bool(continual.get("enabled", False))
+    continual_task_count = int(continual.get("task_count", 11))
+    continual_base_rounds = int(continual.get("base_rounds", 1))
+    continual_rounds_per_task = int(continual.get("rounds_per_task", 1))
+    if continual_enabled:
+        expected_rounds = continual_base_rounds + (
+            continual_task_count * continual_rounds_per_task
+        )
+        if num_rounds != expected_rounds:
+            raise RuntimeError(
+                "Continual PAFA requires exactly base_rounds + task_count * "
+                "rounds_per_task communication rounds"
+            )
 
     def fit_config(round_number: int) -> dict[str, Any]:
-        return {
+        values: dict[str, Any] = {
             "method": method,
             "base-lr": base_lr,
             "lr": base_lr,
@@ -600,6 +665,32 @@ def run_secure_pafa(
             "cohort-directive": coordinator.directive.to_json(),
             **coordinator.signal,
         }
+        if continual_enabled:
+            task_id = continual_task_id_for_round(
+                round_number,
+                base_rounds=continual_base_rounds,
+                rounds_per_task=continual_rounds_per_task,
+                task_count=continual_task_count,
+            )
+            next_task_id = (
+                continual_task_id_for_round(
+                    round_number + 1,
+                    base_rounds=continual_base_rounds,
+                    rounds_per_task=continual_rounds_per_task,
+                    task_count=continual_task_count,
+                )
+                if round_number < num_rounds
+                else task_id
+            )
+            values.update(
+                {
+                    "continual-enabled": True,
+                    "continual-task-id": task_id,
+                    "continual-task-count": continual_task_count,
+                    "continual-task-final": task_id > 0 and next_task_id != task_id,
+                }
+            )
+        return values
 
     strategy = SecureAggregateOnlyFedAvg(
         expected_clients=expected_clients,
@@ -607,6 +698,9 @@ def run_secure_pafa(
         model_array_count=len(initial_arrays),
         coordinator=coordinator,
         on_fit_config_fn=fit_config,
+        continual_task_count=continual_task_count if continual_enabled else None,
+        continual_base_rounds=continual_base_rounds,
+        continual_rounds_per_task=continual_rounds_per_task,
     )
     manager = SimpleClientManager()
     for node_id in node_ids:
@@ -670,4 +764,5 @@ def run_secure_pafa(
         best_macro_mae=best_macro,
         round_metrics=rows,
         coordinator_events=list(coordinator.history),
+        continual_metrics=strategy.latest_continual_metrics,
     )
