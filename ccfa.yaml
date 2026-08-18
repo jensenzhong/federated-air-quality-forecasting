@@ -74,6 +74,8 @@ experiments:
     p1_runner_preflight: passed_twelve_station_no_training
     formal_test_status: blocked_until_secure_evaluation_and_isolated_clients
     multiseed_v1: paused
+    baseline_contract_registry: aqfl/federated/baseline_contract.py
+    strong_baseline_gate: pending_secagg_adapters_and_budget_contract
   registry: artifacts/experiment_registry.csv
   screening:
     status: completed_nonformal

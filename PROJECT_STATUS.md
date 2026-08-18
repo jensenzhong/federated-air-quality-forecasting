@@ -5,7 +5,7 @@
 | 里程碑 | 状态 | 已有证据 | 剩余门禁 |
 |---|---|---|---|
 | M0 安全归档 | 部分完成 | 85 文件归档总清单；9 文件删除清单；扫描 0 命中 | 用户在服务商控制台撤销旧密钥 |
-| M1 项目初始化 | 门禁通过 | `uv sync --extra dev --frozen` 通过；2026-08-18 当前全量验证为 130 项测试通过、1 项完整数据测试因 `BEIJING_AQ_DATA_DIR` 未配置跳过；ruff、mypy（54 个源码入口）和 `git diff --check` 通过；报告依赖已完整锁定 | 无 |
+| M1 项目初始化 | 门禁通过 | `uv sync --extra dev --frozen` 通过；2026-08-18 当前全量验证为 133 项测试通过、1 项完整数据测试因 `BEIJING_AQ_DATA_DIR` 未配置跳过；ruff、mypy（55 个源码入口）和 `git diff --check` 通过；报告依赖已完整锁定 | 无 |
 | M2 数据完成 | 门禁通过 | 12 站/420,768 行 manifest；220 个缓存文件；质量报告；全数据测试通过 | 无 |
 | M3 模型完成 | v1 已审计；v2 重设计 | v1 的 13/13 screening、7 个 30 轮确认及 seed42 test 已保留；量化确认 LLM-MAS 9.6702 未优于预算匹配 FedProx 9.4665，且动作发生塌缩 | 按 `docs/10_llm_mas_v2_research_redesign.md` 实现并通过 P0--P2 |
 | M4 Flower 完成 | 门禁通过 | ServerApp/ClientApp；固定策略；等价门禁 4 案例通过；12 站 FedProx 3 轮真实 ClientApp 基准完成（328.94 秒、峰值 RSS 0.392GB、最低可用内存 1.329GB）；13 项 screening 全部顺序完成 | 保持低内存顺序执行；后续 30 轮确认与正式队列继续记录峰值内存 |
@@ -26,6 +26,7 @@
 ## 当前阻塞项
 
 - 当前 `scripts/run_sim.py` 只覆盖 FedAvg/FedProx，保留为早期资源对照；正式低内存入口是 `scripts/run_flower_sequential.py`，新增 `--continual` 只允许 PAFA SecAgg+ 路径且 preflight 已通过（12 轮、training_started=false）。v1 test 工件已验证，但不得转用为 v2 的未见确认结果。
+- `aqfl/federated/baseline_contract.py` 已建立强基线协议资格注册：普通 FedAvg/FedProx/FedAdam/QFedAvg 当前仍标为 `pending_secagg_adapter`；SCAFFOLD/FedDyn/Flash 标为 `pending_protocol_audit`；依赖可链接逐客户端信号的方法标为 `incompatible_client_signal`，不得静默改写后进入主表。
 - Windows 原生 Ray 后端启动 object store 超时；该路径已放弃，不阻塞顺序运行时主线。
 - 严格 LLM-MAS 已用当前 `DEEPSEEK_API_KEY` 完成 30 轮验证；密钥不写入仓库，后续重跑仍需在运行环境显式提供。
 - v2 顺序 runner 可用于 SecAgg+ 工程验证，但客户端与服务器同进程，因此没有机构隔离资格；新增 probe 的墙钟与峰值 RSS 必须在 P1 重新测量，不能套用 v1 的时长估计。
