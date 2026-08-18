@@ -34,6 +34,7 @@ METHODS = (
     "pafa_llm_no_probe",
     "pafa_fedavg",
     "pafa_fedprox",
+    "pafa_fedadam",
 )
 
 

@@ -244,7 +244,7 @@ def train(msg: Message, context: Context) -> Message:
         private_state = load_private_agent_state(
             context, int(agentic["memory_records_per_client"])
         )
-        static_baseline = method in {"pafa_fedavg", "pafa_fedprox"}
+        static_baseline = method in {"pafa_fedavg", "pafa_fedprox", "pafa_fedadam"}
         if static_baseline:
             proposer = RuleActionProposer()
             proposal = ActionProposal(
@@ -300,7 +300,7 @@ def train(msg: Message, context: Context) -> Message:
         selected = execution.selected_action
         learning_rate = base_lr * selected.lr_scale
         local_epochs = selected.local_epochs
-        proximal_mu = 0.0 if method == "pafa_fedavg" else selected.proximal_mu
+        proximal_mu = 0.0 if method in {"pafa_fedavg", "pafa_fedadam"} else selected.proximal_mu
         probe_batches_used = budget.consumed_batches
         contribution_scale = {
             "normal": 1.0,

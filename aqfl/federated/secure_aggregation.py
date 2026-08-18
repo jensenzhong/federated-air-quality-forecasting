@@ -513,6 +513,11 @@ class SecureAggregateOnlyFedAvg(FedAvg):
         continual_task_count: int | None = None,
         continual_base_rounds: int = 1,
         continual_rounds_per_task: int = 1,
+        server_optimizer: str = "fedavg",
+        server_learning_rate: float = 1.0,
+        server_beta1: float = 0.9,
+        server_beta2: float = 0.99,
+        server_tau: float = 1e-3,
     ) -> None:
         super().__init__(
             fraction_fit=1.0,
@@ -530,6 +535,19 @@ class SecureAggregateOnlyFedAvg(FedAvg):
         self.continual_task_count = continual_task_count
         self.continual_base_rounds = continual_base_rounds
         self.continual_rounds_per_task = continual_rounds_per_task
+        if server_optimizer not in {"fedavg", "fedadam"}:
+            raise ValueError("Unsupported secure server optimizer")
+        if server_learning_rate <= 0 or not 0 < server_beta1 < 1 or not 0 < server_beta2 < 1 or server_tau <= 0:
+            raise ValueError("Invalid secure server optimizer hyperparameters")
+        self.server_optimizer = server_optimizer
+        self.server_learning_rate = float(server_learning_rate)
+        self.server_beta1 = float(server_beta1)
+        self.server_beta2 = float(server_beta2)
+        self.server_tau = float(server_tau)
+        self._server_round = 0
+        self._server_model: list[np.ndarray] | None = None
+        self._server_first_moment: list[np.ndarray] | None = None
+        self._server_second_moment: list[np.ndarray] | None = None
         self.latest_summary: dict[str, float] | None = None
         self.latest_continual_metrics: dict[str, float] | None = None
         self.last_server_round = 0
@@ -585,6 +603,39 @@ class SecureAggregateOnlyFedAvg(FedAvg):
             > 0.5 / self.expected_clients
         ):
             raise RuntimeError("SecAgg+ parameter clipping detected in at least one client")
+        model_arrays = [np.asarray(array, dtype=np.float64) for array in arrays[: self.model_array_count]]
+        if self._server_model is None:
+            self._server_model = [array.copy() for array in model_arrays]
+            self._server_first_moment = [np.zeros_like(array) for array in model_arrays]
+            self._server_second_moment = [np.zeros_like(array) for array in model_arrays]
+        if self.server_optimizer == "fedadam":
+            if self._server_first_moment is None or self._server_second_moment is None:
+                raise RuntimeError("Secure FedAdam moments were not initialized")
+            self._server_round += 1
+            corrected: list[np.ndarray] = []
+            for index, averaged in enumerate(model_arrays):
+                reference = self._server_model[index]
+                delta = averaged - reference
+                first = (
+                    self.server_beta1 * self._server_first_moment[index]
+                    + (1.0 - self.server_beta1) * delta
+                )
+                second = (
+                    self.server_beta2 * self._server_second_moment[index]
+                    + (1.0 - self.server_beta2) * np.square(delta)
+                )
+                self._server_first_moment[index] = first
+                self._server_second_moment[index] = second
+                first_hat = first / (1.0 - self.server_beta1**self._server_round)
+                second_hat = second / (1.0 - self.server_beta2**self._server_round)
+                updated = reference + self.server_learning_rate * first_hat / (
+                    np.sqrt(second_hat) + self.server_tau
+                )
+                corrected.append(updated.astype(np.float32))
+            self._server_model = [array.astype(np.float64) for array in corrected]
+            arrays[: self.model_array_count] = corrected
+        else:
+            self._server_model = model_arrays
         self.coordinator.observe(server_round, len(results), self.latest_summary)
         self.last_server_round = server_round
         metrics = {key: float(value) for key, value in self.latest_summary.items()}
@@ -599,6 +650,15 @@ class SecureAggregateOnlyFedAvg(FedAvg):
                 }
             )
         return ndarrays_to_parameters(arrays[: self.model_array_count]), metrics
+
+    def set_initial_model(self, arrays: ArrayRecord) -> None:
+        """Set the public global model used by the optional server optimizer."""
+        model = [np.asarray(array.numpy(), dtype=np.float64) for array in arrays.values()]
+        if len(model) != self.model_array_count:
+            raise ValueError("Initial model array count does not match the strategy")
+        self._server_model = [array.copy() for array in model]
+        self._server_first_moment = [np.zeros_like(array) for array in model]
+        self._server_second_moment = [np.zeros_like(array) for array in model]
 
 
 @dataclass
@@ -701,7 +761,10 @@ def run_secure_pafa(
         continual_task_count=continual_task_count if continual_enabled else None,
         continual_base_rounds=continual_base_rounds,
         continual_rounds_per_task=continual_rounds_per_task,
+        server_optimizer="fedadam" if method == "pafa_fedadam" else "fedavg",
+        server_learning_rate=1.0,
     )
+    strategy.set_initial_model(initial_arrays)
     manager = SimpleClientManager()
     for node_id in node_ids:
         if not manager.register(GridClientProxy(node_id, strict_grid, context.run_id)):

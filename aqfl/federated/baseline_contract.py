@@ -47,6 +47,7 @@ _VERIFIED_Pafa = {
     "pafa_llm_no_probe": "local LLM no-probe ablation with aggregate-only blackboard",
     "pafa_fedavg": "static FedAvg baseline through the verified aggregate-only PAFA transport",
     "pafa_fedprox": "static FedProx baseline through the verified aggregate-only PAFA transport",
+    "pafa_fedadam": "static FedAdam baseline with aggregate-only server moments",
 }
 
 

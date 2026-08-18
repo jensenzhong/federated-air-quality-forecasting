@@ -81,6 +81,12 @@ experiments:
       run_id: pafa_fedprox-42-20260818T010041Z-1fc6755
       cohort: 12_of_12
       probe_fraction: 0.0
+    pafa_fedadam_smoke:
+      status: passed_nonformal
+      run_id: pafa_fedadam-42-20260818T010639Z-23007a5
+      cohort: 12_of_12
+      probe_fraction: 0.0
+      server_optimizer: fedadam
   registry: artifacts/experiment_registry.csv
   screening:
     status: completed_nonformal
