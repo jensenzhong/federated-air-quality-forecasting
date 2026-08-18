@@ -108,6 +108,11 @@ experiments:
         best_validation_macro_mae: 10.70868174235026
         mean_probe_fraction: 0.7999998092651366
         status: nonformal_validation_only
+      pafa_bandit_fedadam:
+        run_id: pafa_bandit_fedadam-42-20260818T025932Z-90200bf
+        rounds: 3
+        best_validation_macro_mae: 12.495454152425129
+        status: rejected_development_candidate
     pafa_llm:
       preflight: passed
       endpoint: http://127.0.0.1:11434/v1

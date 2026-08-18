@@ -762,7 +762,11 @@ def run_secure_pafa(
         continual_task_count=continual_task_count if continual_enabled else None,
         continual_base_rounds=continual_base_rounds,
         continual_rounds_per_task=continual_rounds_per_task,
-        server_optimizer="fedadam" if method == "pafa_fedadam" else "fedavg",
+        server_optimizer=(
+            "fedadam"
+            if method in {"pafa_fedadam", "pafa_bandit_fedadam"}
+            else "fedavg"
+        ),
         server_learning_rate=server_learning_rate,
     )
     strategy.set_initial_model(initial_arrays)

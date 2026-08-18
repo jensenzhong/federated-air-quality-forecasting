@@ -35,6 +35,7 @@ METHODS = (
     "pafa_fedavg",
     "pafa_fedprox",
     "pafa_fedadam",
+    "pafa_bandit_fedadam",
 )
 
 

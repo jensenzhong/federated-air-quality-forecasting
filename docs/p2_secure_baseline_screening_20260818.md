@@ -11,6 +11,8 @@ This document records nonformal, validation-only, single-seed development runs. 
 | PAFA contextual bandit | `pafa_bandit-42-20260818T021014Z-28f691b` | 10 | 10.5097 | 29.8761 | 0.778 | 8.4404 | valid development control |
 | PAFA rule proposer | `pafa_rule-42-20260818T022928Z-28f691b` | 9 | 10.7087 | 29.8815 | 0.800 | 8.3422 | valid development control |
 
+The controlled hybrid smoke `pafa_bandit_fedadam-42-20260818T025932Z-90200bf` was stopped after 3 rounds: best macro MAE `12.4955` (round 2), versus `11.4939` for the static FedAdam run at round 3. It is retained as a rejected development candidate; no 10-round result is claimed.
+
 Directive compliance was 1.0 on the valid runs, clipping-violation rate was 0, and each SecAgg+ round reported 12 results and 0 failures. The probe/action statistics are aggregate cohort summaries; no client identity or client trajectory was persisted on the server.
 
 ## Invalidated run
@@ -30,4 +32,3 @@ Directive compliance was 1.0 on the valid runs, clipping-violation rate was 0, a
 2. Tune the contextual controller against the corrected FedAdam baseline without changing the privacy boundary.
 3. Re-run the resulting candidate on a frozen, unseen confirmation split; only then consider multi-seed statistics.
 4. Run PAFA LLM only with a loopback/on-prem endpoint. The configured loopback port was not listening during this screening, so no LLM run was started.
-

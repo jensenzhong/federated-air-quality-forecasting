@@ -18,7 +18,7 @@ from aqfl.reporting.registry import ExperimentRegistry
 FEDERATED_METHODS = {
     "fedavg", "fedprox", "qfedavg", "fedadam", "rule_mas", "mas_llm",
     "mas_llm_dynamic_only", "mas_llm_no_fairness", "fedprox_budget_matched",
-    "pafa_rule", "pafa_bandit", "pafa_probe_oracle", "pafa_llm", "pafa_llm_no_probe",
+    "pafa_rule", "pafa_bandit", "pafa_bandit_fedadam", "pafa_probe_oracle", "pafa_llm", "pafa_llm_no_probe",
 }
 DETERMINISTIC_METHODS = {"persistence", "seasonal_naive"}
 

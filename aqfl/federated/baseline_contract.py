@@ -42,6 +42,7 @@ class BaselineContract:
 _VERIFIED_Pafa = {
     "pafa_rule": "rule proposer with aggregate-only blackboard",
     "pafa_bandit": "contextual bandit proposer with aggregate-only blackboard",
+    "pafa_bandit_fedadam": "contextual bandit proposer with aggregate-only blackboard and secure server FedAdam",
     "pafa_probe_oracle": "probe oracle control with aggregate-only blackboard",
     "pafa_llm": "local LLM proposer with aggregate-only blackboard",
     "pafa_llm_no_probe": "local LLM no-probe ablation with aggregate-only blackboard",

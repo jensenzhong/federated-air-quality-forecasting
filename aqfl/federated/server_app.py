@@ -169,6 +169,8 @@ def main(grid: Grid, context: Context) -> None:
                 "controller": (
                     "static_fedadam"
                     if method == "pafa_fedadam"
+                    else "aggregate_blind_bandit_fedadam"
+                    if method == "pafa_bandit_fedadam"
                     else "static_fedavg_or_fedprox"
                     if static_secure_baseline
                     else "aggregate_blind_local_agents"

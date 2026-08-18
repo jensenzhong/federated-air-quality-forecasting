@@ -31,6 +31,7 @@
 - `pafa_fedadam` 已完成 12 站 1 轮 nonformal aggregate-only smoke（run `pafa_fedadam-42-20260818T010639Z-23007a5`）：probe fraction=0、12/12、0 failures，服务器执行独立 moments 更新；该路径只验证 FedAdam 安全适配，不代表性能胜负。
 - `pafa_fedadam` 的首个 10 轮工件 `pafa_fedadam-42-20260818T013129Z-28f691b` 因安全服务器学习率硬编码为 1.0 而排除；代码已修复为透传 runner 的 `--server-lr`，修复后工件为 `pafa_fedadam-42-20260818T015126Z-28f691b`（server_lr=0.1，best validation macro MAE=10.2817）。
 - P2 同动作空间开发对照已完成：`pafa_bandit-42-20260818T021014Z-28f691b` best macro MAE=10.5097、平均 probe fraction=0.778；`pafa_rule-42-20260818T022928Z-28f691b` best macro MAE=10.7087、平均 probe fraction=0.800。两者改善了 PAFA FedProx 的平均 MAE，但尚未超过修复后的 FedAdam。
+- 受控 hybrid `pafa_bandit_fedadam-42-20260818T025932Z-90200bf` 已完成 3 轮 smoke，best macro MAE=12.4955；早期大量 `adapt_fast` 与服务器动量叠加后劣于静态 FedAdam，已停止其 10 轮扩展并登记为 rejected development candidate。
 - `pafa_llm` 已通过静态隐私 preflight，但配置的 loopback `127.0.0.1:11434` 当前未监听；按政策未启动任何客户端级 LLM 请求，也未退回公网 DeepSeek。
 - Windows 原生 Ray 后端启动 object store 超时；该路径已放弃，不阻塞顺序运行时主线。
 - 严格 LLM-MAS 已用当前 `DEEPSEEK_API_KEY` 完成 30 轮验证；密钥不写入仓库，后续重跑仍需在运行环境显式提供。

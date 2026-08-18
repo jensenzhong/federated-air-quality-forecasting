@@ -93,7 +93,7 @@ def _build_proposer(
         return RuleActionProposer()
     if method == "pafa_probe_oracle":
         return ProbeOracleProposer()
-    if method == "pafa_bandit":
+    if method in {"pafa_bandit", "pafa_bandit_fedadam"}:
         bandit_proposer = ContextualBanditProposer(
             alpha=float(config["agentic_v2"]["bandit_alpha"]),
             ridge=float(config["agentic_v2"]["bandit_ridge"]),
