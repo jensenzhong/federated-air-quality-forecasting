@@ -278,11 +278,11 @@ experiments:
       - three_round_resource_benchmark
   verified_engineering_evidence:
     verification_date: 2026-08-18
-    core_test_count: 108
+    core_test_count: 134
     skipped_test_count: 1
     skipped_test_reason: BEIJING_AQ_DATA_DIR_not_configured
     ruff: passed
-    mypy: passed_51_source_entrypoints
+    mypy: passed_54_source_entrypoints
     git_diff_check: passed
     core_coverage_percent: 91.30
     full_data_test: passed

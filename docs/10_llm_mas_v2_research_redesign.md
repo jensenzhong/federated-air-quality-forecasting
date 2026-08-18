@@ -148,7 +148,7 @@ seed=42 原 test 已被读取且影响本次方法设计，因此仅能标为 `d
 1. `completed`：v2 类型、动作库、探针、预算会计、安全执行器和本地记忆。
 2. `completed`：rule、contextual bandit、probe oracle 与本地 LLM proposer 共用同一动作空间。
 3. `completed_engineering`：Flower 官方 SecAgg+ 四阶段合成集成测试；客户端回复清洗；群组统计向量与聚合级协调器。
-4. `completed_engineering`：四阶段严格全客户端、缺失/重复、会话重放/乱序、消息身份与轮次绑定、数值容量和聚合裁剪指示门禁，以及 12 客户端合成量化误差回归，已通过 2026-08-18 全量验证；新增 `CohortDirective` 轮次绑定与三类 proposer 消费测试（当前定向测试 `25 passed`）。
+4. `completed_engineering`：四阶段严格全客户端、缺失/重复、会话重放/乱序、消息身份与轮次绑定、数值容量和聚合裁剪指示门禁，以及 12 客户端合成量化误差回归，已通过 2026-08-18 全量验证；新增 `CohortDirective` 轮次绑定、三类 proposer 消费和离线本地 LLM 解析测试（当前定向测试 `26 passed`）。
 5. `pending`：运行 12 站 1--3 轮 P1 同进程隐私 smoke，并验证 directive 在真实 ClientApp 下一轮改变动作；该 smoke 仍是 nonformal 工程证据。
 6. `blocked`：安全聚合的 test 指标评估、机构隔离部署以及机构签名的 `node -> physical station` 绑定未完成前，不运行正式 test 或多 seed。
 
