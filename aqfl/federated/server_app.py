@@ -147,6 +147,7 @@ def main(grid: Grid, context: Context) -> None:
                 num_rounds=int(context.run_config["num-server-rounds"]),
                 base_lr=base_lr,
                 batch_size=int(context.run_config["batch-size"]),
+                server_learning_rate=float(context.run_config["server-lr"]),
                 strict_llm=bool(context.run_config["strict-llm"]),
                 probe_enabled=method != "pafa_llm_no_probe",
                 event_log=event_log,
@@ -172,6 +173,7 @@ def main(grid: Grid, context: Context) -> None:
                     if static_secure_baseline
                     else "aggregate_blind_local_agents"
                 ),
+                "server_learning_rate": float(context.run_config["server-lr"]),
                 "agent_location": "client_context_state_only",
                 "secure_aggregation": "flower_secaggplus",
                 "coordinator_visibility": "cohort_summary_only",

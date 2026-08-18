@@ -682,6 +682,7 @@ def run_secure_pafa(
     num_rounds: int,
     base_lr: float,
     batch_size: int,
+    server_learning_rate: float = 1.0,
     strict_llm: bool,
     probe_enabled: bool,
     event_log: Path,
@@ -762,7 +763,7 @@ def run_secure_pafa(
         continual_base_rounds=continual_base_rounds,
         continual_rounds_per_task=continual_rounds_per_task,
         server_optimizer="fedadam" if method == "pafa_fedadam" else "fedavg",
-        server_learning_rate=1.0,
+        server_learning_rate=server_learning_rate,
     )
     strategy.set_initial_model(initial_arrays)
     manager = SimpleClientManager()

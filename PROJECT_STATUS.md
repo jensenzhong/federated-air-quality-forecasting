@@ -10,7 +10,7 @@
 | M3 模型完成 | v1 已审计；v2 重设计 | v1 的 13/13 screening、7 个 30 轮确认及 seed42 test 已保留；量化确认 LLM-MAS 9.6702 未优于预算匹配 FedProx 9.4665，且动作发生塌缩 | 按 `docs/10_llm_mas_v2_research_redesign.md` 实现并通过 P0--P2 |
 | M4 Flower 完成 | 门禁通过 | ServerApp/ClientApp；固定策略；等价门禁 4 案例通过；12 站 FedProx 3 轮真实 ClientApp 基准完成（328.94 秒、峰值 RSS 0.392GB、最低可用内存 1.329GB）；13 项 screening 全部顺序完成 | 保持低内存顺序执行；后续 30 轮确认与正式队列继续记录峰值内存 |
 | M5 MAS 完成 | P1 nonformal smoke 通过 | 动作、探针、执行、记忆已下沉 ClientApp；旧服务器逐客户端策略永久 fail-closed；Flower SecAgg+ 3 客户端与 12 客户端四阶段合成闭环通过；严格全客户端、缺失回复 fail-closed、会话重放/乱序、消息身份、数值容量、量化误差和聚合裁剪指示门禁已通过全量验证；真实 12 站 pafa_rule 1 轮和 3 轮同进程 smoke 均 12/12、0 failures，round 3 已产生 volatile/tail_recovery 指令；12 站 continual 12 轮 preflight 仍为 `training_started=false` | 该 smoke 不具备机构隔离资格；安全 test 评估、机构隔离和机构签名的 node->physical-station 绑定仍阻塞 |
-| M6 正式实验 | 暂停 | seed42 v1 test 结果完整保留，但因已用于 v2 设计，只能作为 v2 的开发审计证据；P1 nonformal smoke 已通过 | 先完成强基线/预算合同与同动作空间对照，再做 v2 P2；建立新的未见确认集后才恢复多 seed |
+| M6 正式实验 | 暂停 | 已完成 PAFA FedProx/FedAdam/Bandit/Rule 各 10 轮验证集开发运行；修复后 FedAdam 最佳 macro MAE=10.2817，Bandit=10.5097，Rule=10.7087；详细记录见 `docs/p2_secure_baseline_screening_20260818.md` | 先完成探针预算匹配与最强基线调优；当前仍未达到 active goal 的“相对最强基线至少改善1%且配对CI不跨0”门槛；本地 LLM endpoint 未监听 |
 | M7 论文证据包 | 未开始 | 报告和统计生成模块 | 只使用 validated 运行生成表图与结论 |
 
 ## 当前最高优先级
@@ -29,6 +29,9 @@
 - `aqfl/federated/baseline_contract.py` 已建立强基线协议资格注册：普通 FedAvg/FedProx/FedAdam/QFedAvg 当前仍标为 `pending_secagg_adapter`；SCAFFOLD/FedDyn/Flash 标为 `pending_protocol_audit`；依赖可链接逐客户端信号的方法标为 `incompatible_client_signal`，不得静默改写后进入主表。
 - `pafa_fedprox` 已完成 12 站 1 轮 nonformal aggregate-only smoke（run `pafa_fedprox-42-20260818T010041Z-1fc6755`）：probe fraction=0、12/12、0 failures，工件显式 `agentic_v2=false/secure_baseline=true`；该路径只验证安全基线传输和预算语义，不代表性能胜负。
 - `pafa_fedadam` 已完成 12 站 1 轮 nonformal aggregate-only smoke（run `pafa_fedadam-42-20260818T010639Z-23007a5`）：probe fraction=0、12/12、0 failures，服务器执行独立 moments 更新；该路径只验证 FedAdam 安全适配，不代表性能胜负。
+- `pafa_fedadam` 的首个 10 轮工件 `pafa_fedadam-42-20260818T013129Z-28f691b` 因安全服务器学习率硬编码为 1.0 而排除；代码已修复为透传 runner 的 `--server-lr`，修复后工件为 `pafa_fedadam-42-20260818T015126Z-28f691b`（server_lr=0.1，best validation macro MAE=10.2817）。
+- P2 同动作空间开发对照已完成：`pafa_bandit-42-20260818T021014Z-28f691b` best macro MAE=10.5097、平均 probe fraction=0.778；`pafa_rule-42-20260818T022928Z-28f691b` best macro MAE=10.7087、平均 probe fraction=0.800。两者改善了 PAFA FedProx 的平均 MAE，但尚未超过修复后的 FedAdam。
+- `pafa_llm` 已通过静态隐私 preflight，但配置的 loopback `127.0.0.1:11434` 当前未监听；按政策未启动任何客户端级 LLM 请求，也未退回公网 DeepSeek。
 - Windows 原生 Ray 后端启动 object store 超时；该路径已放弃，不阻塞顺序运行时主线。
 - 严格 LLM-MAS 已用当前 `DEEPSEEK_API_KEY` 完成 30 轮验证；密钥不写入仓库，后续重跑仍需在运行环境显式提供。
 - v2 顺序 runner 可用于 SecAgg+ 工程验证，但客户端与服务器同进程，因此没有机构隔离资格；新增 probe 的墙钟与峰值 RSS 必须在 P1 重新测量，不能套用 v1 的时长估计。
@@ -37,7 +40,8 @@
 ## 下一步
 
 1. 暂停 seeds `123,456,789,2024`；已中断的 centralized seed123 标记 invalid，不续跑 v1 队列。
-2. C1--C4 协同闭环与 continual SecAgg+ 固定数组已通过 synthetic/单元门禁；P1 1/3 轮真实同进程 smoke 已通过，下一步先冻结强基线/预算合同，再决定是否进入 seed42 验证集 10 轮 P2。该 smoke 不作为正式隐私证据。
-3. v2 必须加入相同动作空间的 contextual-bandit、no-probe 和 probe-only 对照，避免把额外计算或动作空间收益误归因于 LLM；SCAFFOLD、FedDyn、Flash 等强基线需先完成协议兼容性审计。
+2. C1--C4 协同闭环与 continual SecAgg+ 固定数组已通过 synthetic/单元门禁；P2 的 FedAdam/Bandit/Rule 开发运行已完成，但仅为 validation/nonformal 证据。
+3. 下一步实现 aggregate-only 的探针预算匹配 FedProx 控制，并在不改变隐私边界的前提下调优 contextual controller；未见确认集冻结前禁止正式 test、多 seed 和“超过基线”结论。
+4. v2 仍需保留 no-probe、probe-only 和相同动作空间对照；SCAFFOLD、FedDyn、Flash 等强基线需先完成协议兼容性审计。
 
 任何未经真实执行与 `validate_run` 验证的结果均为 `TBD`。

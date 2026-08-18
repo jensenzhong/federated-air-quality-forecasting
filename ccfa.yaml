@@ -33,7 +33,7 @@ experiments:
   formal_results: TBD
   v2:
     method: probe_then_act_federated_agent
-    status: c4_local_task_adapter_partial_clientapp_smoke_pending
+    status: p2_validation_screening_complete_budget_match_pending
     design: docs/10_llm_mas_v2_research_redesign.md
     goal_roadmap: docs/12_goal_driven_mas_fl_roadmap.md
     continual_benchmark_note: docs/benchmark-2510.21491_catastrophic_forgetting.md
@@ -87,6 +87,32 @@ experiments:
       cohort: 12_of_12
       probe_fraction: 0.0
       server_optimizer: fedadam
+    p2_screening_report: docs/p2_secure_baseline_screening_20260818.md
+    p2_screening_runs:
+      pafa_fedprox:
+        run_id: pafa_fedprox-42-20260818T011153Z-28f691b
+        best_validation_macro_mae: 10.787518819173176
+        status: nonformal_validation_only
+      pafa_fedadam:
+        run_id: pafa_fedadam-42-20260818T015126Z-28f691b
+        server_learning_rate: 0.1
+        best_validation_macro_mae: 10.281721750895182
+        status: nonformal_validation_only
+      pafa_bandit:
+        run_id: pafa_bandit-42-20260818T021014Z-28f691b
+        best_validation_macro_mae: 10.509681701660156
+        mean_probe_fraction: 0.7777773221333821
+        status: nonformal_validation_only
+      pafa_rule:
+        run_id: pafa_rule-42-20260818T022928Z-28f691b
+        best_validation_macro_mae: 10.70868174235026
+        mean_probe_fraction: 0.7999998092651366
+        status: nonformal_validation_only
+    pafa_llm:
+      preflight: passed
+      endpoint: http://127.0.0.1:11434/v1
+      endpoint_listening: false
+      run_status: not_started_privacy_gate
   registry: artifacts/experiment_registry.csv
   screening:
     status: completed_nonformal
