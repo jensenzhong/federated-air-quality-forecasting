@@ -38,7 +38,9 @@ Directive compliance was 1.0 on the valid runs, clipping-violation rate was 0, a
 
 ## Next development gate
 
-1. Add or verify an aggregate-only, probe-budget-matched FedProx control.
-2. Tune the contextual controller against the corrected FedAdam baseline without changing the privacy boundary.
-3. Re-run the resulting candidate on a frozen, unseen confirmation split; only then consider multi-seed statistics.
-4. Run PAFA LLM only with a loopback/on-prem endpoint. The configured loopback port was not listening during this screening, so no LLM run was started.
+The aggregate-only probe-budget-matched FedProx control has now been verified, and the reproducibility contract is frozen in `docs/13_v2_reproducibility_contract.md`. The remaining gates are:
+
+1. Freeze an unseen confirmation split and establish institutional/client-process isolation without weakening SecAgg+.
+2. Run the real `pafa_llm` proposer only against an approved loopback/on-prem endpoint; the localhost stub smoke is transport evidence, not LLM quality evidence.
+3. Re-run the frozen candidate and strongest compatible baselines on the confirmation split; only if the 1%/CI/tail gates hold may the five-seed experiment begin.
+4. If those gates fail, stop the accuracy-superiority claim and report the validated tail-risk/fairness conclusion instead.
