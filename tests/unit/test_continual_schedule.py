@@ -5,6 +5,9 @@ import pytest
 from aqfl.data.continual_schedule import (
     BENCHMARK_BASE_END,
     BENCHMARK_BASE_START,
+    BENCHMARK_PHASE_COUNT,
+    benchmark_evaluation_window,
+    benchmark_phase_window,
     benchmark_task_schedule,
     task_key,
     validate_task_schedule,
@@ -24,6 +27,12 @@ def test_task_schedule_and_keys_fail_closed() -> None:
     tasks = benchmark_task_schedule()
     with pytest.raises(ValueError, match="exactly 11"):
         validate_task_schedule(tasks[:-1])
+    assert BENCHMARK_PHASE_COUNT == 12
+    assert benchmark_phase_window(0) == (BENCHMARK_BASE_START, BENCHMARK_BASE_END)
+    assert benchmark_evaluation_window(0)[0].isoformat() == "2014-05-04T00:00:00"
+    assert task_key(0, "test") == "base_test"
     assert task_key(11, "test") == "task_11_test"
+    with pytest.raises(ValueError, match="Unknown continual task"):
+        task_key(-1, "test")
     with pytest.raises(ValueError, match="Unknown continual task"):
         task_key(12, "test")

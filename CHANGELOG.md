@@ -8,6 +8,7 @@
 - 增加 continual benchmark AF/AP/AvgPerf 评估与固定长度任务矩阵 codec；仅允许最小群组后的 SecAgg+ 聚合摘要进入服务器评估，尚未声称已复现论文结果。
 - 审计用户提供的 benchmark notebook，并冻结其精确 base/base-test/11-task 时间边界；记录源码可复现性与 SecAgg+ 兼容性差异。
 - C1--C3：补充 `CohortDirective` 篡改/重放、统一 proposer 消费、聚合摘要身份隔离与 directive 质量回归测试；全量测试 119 passed、1 skipped，mypy 扩展至 52 个源码入口。C4/P1 continual ClientApp 任务适配与真实 smoke 仍未完成。
+- C4 partial：新增冻结 benchmark 的 T0/base-test/T1--T11 本地 cache 适配器、chronological 80/20 任务视图和客户端私有 `LocalContinualTaskLedger`；全量测试 123 passed、1 skipped，mypy 扩展至 53 个源码入口。尚未启动 continual ClientApp 训练或 P1 smoke。
 
 ## 0.3.0 - 2026-08-18
 

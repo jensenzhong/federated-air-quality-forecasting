@@ -33,7 +33,7 @@ experiments:
   formal_results: TBD
   v2:
     method: probe_then_act_federated_agent
-    status: c3_blackboard_directive_privacy_regression_passed_c4_clientapp_pending
+    status: c4_local_task_adapter_partial_clientapp_smoke_pending
     design: docs/10_llm_mas_v2_research_redesign.md
     goal_roadmap: docs/12_goal_driven_mas_fl_roadmap.md
     continual_benchmark_note: docs/benchmark-2510.21491_catastrophic_forgetting.md
@@ -53,6 +53,8 @@ experiments:
     continual_af_ap_avgperf_codec: implemented_aggregate_only
     continual_task_schedule: frozen_source_audit_pending_clientapp_adapter
     clientapp_continual_adapter: pending
+    local_continual_cache_adapter: implemented_client_local_only
+    local_task_ledger: implemented_private_matrix
     p1_continual_smoke: blocked_until_clientapp_adapter
     p1_runner_preflight: passed_twelve_station_no_training
     formal_test_status: blocked_until_secure_evaluation_and_isolated_clients

@@ -27,6 +27,8 @@ BENCHMARK_BASE_START = datetime.fromisoformat("2013-05-01T00:00:00")
 BENCHMARK_BASE_END = datetime.fromisoformat("2014-05-03T23:00:00")
 BENCHMARK_BASE_TEST_START = datetime.fromisoformat("2014-05-04T00:00:00")
 BENCHMARK_BASE_TEST_END = datetime.fromisoformat("2014-05-04T23:00:00")
+BENCHMARK_TASK_COUNT = 11
+BENCHMARK_PHASE_COUNT = BENCHMARK_TASK_COUNT + 1
 
 BENCHMARK_TASK_BOUNDS: tuple[tuple[str, str], ...] = (
     ("2014-05-05", "2014-08-06"),
@@ -60,6 +62,24 @@ def benchmark_task_schedule() -> tuple[ContinualTaskWindow, ...]:
     return tasks
 
 
+def benchmark_phase_window(task_id: int) -> tuple[datetime, datetime]:
+    """Return the inclusive public time window for base (0) or task 1..11."""
+    if task_id == 0:
+        return BENCHMARK_BASE_START, BENCHMARK_BASE_END
+    tasks = benchmark_task_schedule()
+    if not 1 <= task_id <= len(tasks):
+        raise ValueError("Unknown continual task ID")
+    task = tasks[task_id - 1]
+    return task.start, task.end
+
+
+def benchmark_evaluation_window(task_id: int) -> tuple[datetime, datetime]:
+    """Return the base-test or task evaluation window without client state."""
+    if task_id == 0:
+        return BENCHMARK_BASE_TEST_START, BENCHMARK_BASE_TEST_END
+    return benchmark_phase_window(task_id)
+
+
 def validate_task_schedule(tasks: tuple[ContinualTaskWindow, ...]) -> None:
     if len(tasks) != 11:
         raise ValueError("The supplied benchmark schedule must contain exactly 11 tasks")
@@ -73,8 +93,8 @@ def validate_task_schedule(tasks: tuple[ContinualTaskWindow, ...]) -> None:
 
 
 def task_key(task_id: int, split: str) -> str:
-    if task_id < 1 or task_id > len(BENCHMARK_TASK_BOUNDS):
+    if task_id < 0 or task_id > len(BENCHMARK_TASK_BOUNDS):
         raise ValueError("Unknown continual task ID")
     if split not in {"train", "test"}:
         raise ValueError("Continual task split must be train or test")
-    return f"task_{task_id}_{split}"
+    return f"base_{split}" if task_id == 0 else f"task_{task_id}_{split}"

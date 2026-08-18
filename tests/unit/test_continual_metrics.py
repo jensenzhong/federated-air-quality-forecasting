@@ -4,6 +4,7 @@ import numpy as np
 import pytest
 
 from aqfl.evaluation.continual import (
+    LocalContinualTaskLedger,
     continual_metrics,
     decode_task_matrix_sum,
     encode_task_matrix,
@@ -43,3 +44,18 @@ def test_continual_metric_codec_rejects_non_square_or_private_metadata() -> None
     with pytest.raises(ValueError, match="square"):
         encode_task_matrix(np.ones((2, 3)))
     assert "client" not in str(continual_metrics(np.eye(2)).to_dict()).lower()
+
+
+def test_local_task_ledger_is_complete_before_secagg_encoding() -> None:
+    ledger = LocalContinualTaskLedger(task_count=2)
+    with pytest.raises(RuntimeError, match="incomplete"):
+        ledger.encode_for_secagg()
+    ledger.record(1, 1, 1.0)
+    ledger.record(1, 2, 2.0)
+    ledger.record(2, 1, 3.0)
+    ledger.record(2, 2, 1.5)
+    vector = ledger.encode_for_secagg()
+    assert vector.shape == (4,)
+    assert np.array_equal(ledger.matrix(), np.asarray([[1.0, 2.0], [3.0, 1.5]]))
+    with pytest.raises(RuntimeError, match="overwrite"):
+        ledger.record(1, 1, 9.0)

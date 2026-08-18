@@ -24,6 +24,50 @@ class ContinualMetricSummary:
         return asdict(self)
 
 
+class LocalContinualTaskLedger:
+    """Keep a task-performance matrix inside one client process only.
+
+    The benchmark reports tasks 1..N; the base phase (T0) initializes the
+    model and is evaluated separately.  This ledger deliberately has no client
+    identity or serialization method.  Callers may pass its fixed-size encoded
+    matrix to the existing SecAgg+ array path only after the local row is
+    complete and the server-side minimum-cohort gate is satisfied.
+    """
+
+    def __init__(self, task_count: int = 11) -> None:
+        if task_count < 2:
+            raise ValueError("Continual task ledger requires at least two tasks")
+        self.task_count = int(task_count)
+        self._matrix = np.full((self.task_count, self.task_count), np.nan, dtype=np.float64)
+
+    def record(self, task_id: int, evaluated_task_id: int, metric: float) -> None:
+        if not 1 <= task_id <= self.task_count:
+            raise ValueError("Unknown continual task ID")
+        if not 1 <= evaluated_task_id <= self.task_count:
+            raise ValueError("Unknown evaluated task ID")
+        value = float(metric)
+        if not np.isfinite(value) or value < 0:
+            raise ValueError("Continual metric must be finite and non-negative")
+        row, column = task_id - 1, evaluated_task_id - 1
+        previous = self._matrix[row, column]
+        if np.isfinite(previous) and not np.isclose(previous, value):
+            raise RuntimeError("Continual task metric overwrite rejected")
+        self._matrix[row, column] = value
+
+    def matrix(self, *, through_task: int | None = None) -> np.ndarray:
+        last_task = self.task_count if through_task is None else int(through_task)
+        if not 1 <= last_task <= self.task_count:
+            raise ValueError("Unknown continual task ID")
+        values = self._matrix[:last_task, :last_task]
+        if not np.isfinite(values).all():
+            raise RuntimeError("Local continual task matrix is incomplete")
+        return values.copy()
+
+    def encode_for_secagg(self) -> np.ndarray:
+        """Return only the fixed-size numeric payload suitable for SecAgg+."""
+        return encode_task_matrix(self.matrix())
+
+
 def _validate_matrix(matrix: np.ndarray) -> np.ndarray:
     values = np.asarray(matrix, dtype=np.float64)
     if values.ndim != 2 or values.shape[0] != values.shape[1]:
