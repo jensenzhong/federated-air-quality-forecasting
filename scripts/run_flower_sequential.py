@@ -34,6 +34,7 @@ METHODS = (
     "pafa_llm_no_probe",
     "pafa_fedavg",
     "pafa_fedprox",
+    "pafa_fedprox_budget_matched",
     "pafa_fedadam",
     "pafa_bandit_fedadam",
 )

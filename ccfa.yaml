@@ -103,6 +103,12 @@ experiments:
         best_validation_macro_mae: 10.509681701660156
         mean_probe_fraction: 0.7777773221333821
         status: nonformal_validation_only
+      pafa_fedprox_budget_matched:
+        run_id: pafa_fedprox_budget_matched-42-20260818T031349Z-323da88
+        best_validation_macro_mae: 10.528024037679035
+        high_pollution_mae_at_best_round: 29.676055908203125
+        mean_probe_fraction: 1.0
+        status: nonformal_validation_only
       pafa_rule:
         run_id: pafa_rule-42-20260818T022928Z-28f691b
         best_validation_macro_mae: 10.70868174235026

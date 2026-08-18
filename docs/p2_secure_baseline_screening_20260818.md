@@ -8,6 +8,7 @@ This document records nonformal, validation-only, single-seed development runs. 
 | --- | --- | ---: | ---: | ---: | ---: | ---: | --- |
 | PAFA FedProx | `pafa_fedprox-42-20260818T011153Z-28f691b` | 10 | 10.7875 | 29.3753 | 0.000 | 7.6330 | valid development baseline |
 | PAFA FedAdam (`server_lr=0.1`) | `pafa_fedadam-42-20260818T015126Z-28f691b` | 10 | 10.2817 | 31.2001 | 0.000 | 8.3265 | valid development baseline |
+| PAFA FedProx (probe-budget matched) | `pafa_fedprox_budget_matched-42-20260818T031349Z-323da88` | 10 | 10.5280 | 29.6761 | 1.000 | 8.8835 | valid budget control |
 | PAFA contextual bandit | `pafa_bandit-42-20260818T021014Z-28f691b` | 10 | 10.5097 | 29.8761 | 0.778 | 8.4404 | valid development control |
 | PAFA rule proposer | `pafa_rule-42-20260818T022928Z-28f691b` | 9 | 10.7087 | 29.8815 | 0.800 | 8.3422 | valid development control |
 
@@ -22,6 +23,7 @@ Directive compliance was 1.0 on the valid runs, clipping-violation rate was 0, a
 ## Interpretation
 
 - Bandit and Rule improve the mean MAE relative to the PAFA FedProx development run, but neither beats corrected PAFA FedAdam on mean MAE.
+- Against the probe-budget-matched FedProx control, Bandit improves macro MAE by only about 0.17% on this seed and is worse on high-pollution MAE; this is below the pre-registered 1% gate and does not establish an agentic gain.
 - Bandit and Rule have lower high-pollution MAE than corrected FedAdam, but this is a trade-off, not a uniformly superior result.
 - Probe fractions near 0.8 mean that a budget-matched baseline and a probe-cost sensitivity analysis are still required.
 - The active goal's 1% improvement and paired-statistics gate is not met by this single-seed screening. No formal multi-seed or test run is authorized yet.

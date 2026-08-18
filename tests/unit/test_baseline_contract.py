@@ -14,6 +14,7 @@ def test_only_secagg_verified_methods_are_formal_eligible() -> None:
     assert require_formal_baseline("pafa_fedprox").family == "secure_baseline"
     assert require_formal_baseline("pafa_fedadam").formal_eligible
     assert require_formal_baseline("pafa_bandit_fedadam").formal_eligible
+    assert require_formal_baseline("pafa_fedprox_budget_matched").formal_eligible
     with pytest.raises(RuntimeError, match="pending_secagg_adapter"):
         require_formal_baseline("fedprox")
 

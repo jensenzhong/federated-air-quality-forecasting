@@ -153,7 +153,12 @@ def main(grid: Grid, context: Context) -> None:
                 event_log=event_log,
             )
             model.load_state_dict(secure_result.best_arrays.to_torch_state_dict())
-            static_secure_baseline = method in {"pafa_fedavg", "pafa_fedprox", "pafa_fedadam"}
+            static_secure_baseline = method in {
+                "pafa_fedavg",
+                "pafa_fedprox",
+                "pafa_fedadam",
+                "pafa_fedprox_budget_matched",
+            }
             summary = {
                 "protocol": "flower_secaggplus_client_local_agents",
                 "execution_mode": execution_mode,
@@ -171,6 +176,8 @@ def main(grid: Grid, context: Context) -> None:
                     if method == "pafa_fedadam"
                     else "aggregate_blind_bandit_fedadam"
                     if method == "pafa_bandit_fedadam"
+                    else "static_fedprox_probe_budget_matched"
+                    if method == "pafa_fedprox_budget_matched"
                     else "static_fedavg_or_fedprox"
                     if static_secure_baseline
                     else "aggregate_blind_local_agents"

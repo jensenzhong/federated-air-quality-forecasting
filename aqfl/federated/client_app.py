@@ -24,7 +24,12 @@ from aqfl.agents.local_runtime import (
     record_local_outcome,
     save_private_agent_state,
 )
-from aqfl.agents.v2_contracts import ActionProposal, CohortDirective, ProbeOutcome
+from aqfl.agents.v2_contracts import (
+    ActionProposal,
+    CohortDirective,
+    ExecutionDecision,
+    ProbeOutcome,
+)
 from aqfl.agents.v2_proposers import ActionProposer, RuleActionProposer
 from aqfl.config import load_config, set_seed
 from aqfl.data.continual_dataset import load_station_continual_dataset
@@ -244,14 +249,24 @@ def train(msg: Message, context: Context) -> Message:
         private_state = load_private_agent_state(
             context, int(agentic["memory_records_per_client"])
         )
-        static_baseline = method in {"pafa_fedavg", "pafa_fedprox", "pafa_fedadam"}
+        budget_matched_baseline = method == "pafa_fedprox_budget_matched"
+        static_baseline = method in {"pafa_fedavg", "pafa_fedprox", "pafa_fedadam"} or budget_matched_baseline
         if static_baseline:
             proposer = RuleActionProposer()
             proposal = ActionProposal(
                 LOCAL_CLIENT_TOKEN,
                 "stable",
-                ("fixed static baseline action",),
-                resolve_action_ids(("safe_default",)),
+                (
+                    "fixed static baseline action",
+                    "probe budget is consumed without adaptive action selection"
+                    if budget_matched_baseline
+                    else "no probe budget is consumed",
+                ),
+                resolve_action_ids(
+                    ("safe_default", "cautious", "adapt_fast")
+                    if budget_matched_baseline
+                    else ("safe_default",)
+                ),
                 "rule",
             )
         else:
@@ -263,7 +278,9 @@ def train(msg: Message, context: Context) -> Message:
                 strict_llm=bool(train_config.get("strict-llm", True)),
                 directive=directive,
             )
-        probe_enabled = bool(train_config.get("probe-enabled", True)) and not static_baseline
+        probe_enabled = bool(train_config.get("probe-enabled", True)) and (
+            not static_baseline or budget_matched_baseline
+        )
         outcomes: tuple[ProbeOutcome, ...] = ()
         if probe_enabled:
             outcomes = probe_candidates(
@@ -295,6 +312,16 @@ def train(msg: Message, context: Context) -> Message:
             budget,
             probe_enabled=probe_enabled,
         )
+        if budget_matched_baseline:
+            safe_default = build_action_library()["safe_default"]
+            execution = ExecutionDecision(
+                client_id=execution.client_id,
+                selected_action=safe_default,
+                accepted=True,
+                reason="budget-matched control consumed probes but fixed FedProx action",
+                conservative_gain=execution.conservative_gain,
+                probe_outcomes=execution.probe_outcomes,
+            )
         if not static_baseline:
             execution = apply_cohort_lr_cap(execution, directive.lr_scale_cap)
         selected = execution.selected_action
