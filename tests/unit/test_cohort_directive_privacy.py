@@ -78,6 +78,47 @@ def test_rule_bandit_and_llm_schema_consume_the_same_public_directive() -> None:
     assert "station-7" not in prompt
 
 
+def test_local_llm_proposer_parses_and_applies_directive_offline(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    config = {
+        "privacy": {"mode": "strict_federated", "client_llm_allowed_hosts": []},
+        "llm": {
+            "base_url": "http://127.0.0.1:11434/v1",
+            "client_base_url": "http://127.0.0.1:11434/v1",
+            "model": "local-institution-model",
+            "client_model": "local-institution-model",
+            "temperature": 0.0,
+            "client_api_key_env": "",
+        },
+    }
+    proposer = LLMActionProposer(config, None, strict=True)
+
+    def fake_call(prompt: str) -> str:
+        assert '"directive_round":4' in prompt.replace(" ", "")
+        return json.dumps(
+            {
+                "proposals": [
+                    {
+                        "client_id": "local",
+                        "diagnosis": "conflict",
+                        "evidence": ["update cosine is negative"],
+                        "candidate_action_ids": ["adapt_fast", "safe_default"],
+                    }
+                ]
+            }
+        )
+
+    monkeypatch.setattr(proposer, "_call", fake_call)
+    result = proposer.propose(5, [_capsule()], EpisodicMemory(), _directive())["local"]
+    assert result.source == "llm"
+    assert [action.action_id for action in result.candidates] == [
+        "cautious",
+        "safe_default",
+    ]
+    assert result.prompt_hash
+
+
 def test_aggregate_summary_exposes_only_fixed_rates_and_directive_quality() -> None:
     proposal = ActionProposal(
         "local",
