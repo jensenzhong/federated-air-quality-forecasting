@@ -118,7 +118,7 @@ def main(grid: Grid, context: Context) -> None:
             + "\n"
         )
     model = build_model(config)
-    arrays = ArrayRecord(model.state_dict())
+    arrays = ArrayRecord.from_torch_state_dict(model.state_dict())
     kwargs = _base_kwargs(expected_clients)
     base_lr = float(context.run_config["lr"])
     evaluation_split = str(context.run_config.get("evaluation-split", "val"))

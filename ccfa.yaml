@@ -57,7 +57,20 @@ experiments:
     local_task_ledger: implemented_private_matrix
     continual_task_matrix_secagg: passed_synthetic_final_task_only
     continual_schedule_preflight: passed_12_rounds_no_training
-    p1_continual_smoke: blocked_until_clientapp_adapter
+    p1_one_round_smoke:
+      status: passed_nonformal
+      run_id: pafa_rule-42-20260818T003708Z-a72a7ca
+      cohort: 12_of_12
+      failures: 0
+      evaluation_split: val
+    p1_three_round_smoke:
+      status: passed_nonformal
+      run_id: pafa_rule-42-20260818T003939Z-a72a7ca
+      cohort: 12_of_12_each_round
+      failures: 0
+      directive_round3: volatile_tail_recovery_lr_cap_0.5
+      evaluation_split: val
+    p1_continual_smoke: pending_real_12_station_task_run
     p1_runner_preflight: passed_twelve_station_no_training
     formal_test_status: blocked_until_secure_evaluation_and_isolated_clients
     multiseed_v1: paused

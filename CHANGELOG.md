@@ -11,6 +11,7 @@
 - C4 partial：新增冻结 benchmark 的 T0/base-test/T1--T11 本地 cache 适配器、chronological 80/20 任务视图和客户端私有 `LocalContinualTaskLedger`；全量测试 125 passed、1 skipped，mypy 扩展至 53 个源码入口。尚未启动 continual ClientApp 训练或 P1 smoke。
 - C4 partial：ClientApp 增加显式 `continual-enabled`/`continual-task-id` 门禁并在客户端本地选择当前任务训练窗口；默认 continual 仍关闭，真实 12 站任务调度尚未启动。
 - C4：任务结束时的本地 task ledger 与固定长度归一化任务矩阵接入 PAFA SecAgg+；服务器仅在最终任务解码聚合 AF/AP/AvgPerf。新增 3-client synthetic continual SecAgg+ 回归和 12 轮 continual preflight（不启动训练）。
+- P1 nonformal：修复 Flower SecAgg+ 参数路径的 tensor state-dict 数组键映射（named/numeric order），并通过真实 12 站 pafa_rule 1 轮与 3 轮 smoke；新增数组 schema 回归测试。该结果不作为正式隐私或性能证据。
 
 ## 0.3.0 - 2026-08-18
 

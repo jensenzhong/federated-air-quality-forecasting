@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import copy
 import time
+from collections import OrderedDict
 from typing import Any
 
 import numpy as np
@@ -126,6 +127,23 @@ def _is_secure_pafa_request(msg: Message, context: Context) -> bool:
     )
 
 
+def _state_dict_from_array_record(
+    model: torch.nn.Module,
+    record: ArrayRecord,
+) -> OrderedDict[str, torch.Tensor]:
+    incoming = record.to_torch_state_dict()
+    expected_keys = list(model.state_dict())
+    if list(incoming) == expected_keys:
+        return OrderedDict((key, incoming[key]) for key in expected_keys)
+    numeric_keys = [str(index) for index in range(len(expected_keys))]
+    if list(incoming) == numeric_keys:
+        return OrderedDict(
+            (key, value)
+            for key, value in zip(expected_keys, incoming.values(), strict=True)
+        )
+    raise RuntimeError("Flower array record keys do not match the local model schema")
+
+
 def _continual_task_id(
     config: dict[str, Any],
     train_config: Any,
@@ -177,7 +195,7 @@ def train(msg: Message, context: Context) -> Message:
     else:
         incoming_record = msg.content["arrays"]
         train_config = msg.content["config"]
-    incoming = incoming_record.to_torch_state_dict()
+    incoming = _state_dict_from_array_record(model, incoming_record)
     model.load_state_dict(incoming)
     before = copy.deepcopy(model.state_dict())
     continual_task_id = _continual_task_id(config, train_config)
@@ -377,7 +395,7 @@ def train(msg: Message, context: Context) -> Message:
             execution=execution,
             directive=directive,
         )
-        arrays = ArrayRecord(model.state_dict())
+        arrays = ArrayRecord.from_torch_state_dict(model.state_dict())
         arrays[COHORT_SUMMARY_ARRAY] = Array(summary_vector)
         if continual_task_id is not None:
             if continual_task_matrix_vector is None:
@@ -407,7 +425,12 @@ def train(msg: Message, context: Context) -> Message:
         "num-examples": len(train_dataset),
         "partition-id": int(context.node_config["partition-id"]),
     })
-    content = RecordDict({"arrays": ArrayRecord(model.state_dict()), "metrics": metrics})
+    content = RecordDict(
+        {
+            "arrays": ArrayRecord.from_torch_state_dict(model.state_dict()),
+            "metrics": metrics,
+        }
+    )
     return Message(content=content, reply_to=msg)
 
 
@@ -416,7 +439,7 @@ def evaluate(msg: Message, context: Context) -> Message:
     config = _config(context)
     station = _station(context, config)
     model = build_model(config)
-    model.load_state_dict(msg.content["arrays"].to_torch_state_dict())
+    model.load_state_dict(_state_dict_from_array_record(model, msg.content["arrays"]))
     split = str(msg.content["config"].get("split", "val"))
     if split not in {"val", "test"}:
         raise ValueError(f"Unsupported evaluation split: {split}")
