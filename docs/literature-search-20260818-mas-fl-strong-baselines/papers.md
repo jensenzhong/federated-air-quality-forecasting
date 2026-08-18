@@ -61,11 +61,11 @@ Source policy: official proceedings/OpenReview/CVF/PMLR/arXiv preferred; MDPI ex
 
 | Cluster | Status | Open gap | Direction | Evidence needed |
 |---|---|---|---|---|
-| LLM/agent orchestration | crowded but algorithmically open | 缺同动作空间、强基线、可证伪机制 | probe-validated secure blackboard MAS | LLM vs bandit/rule/oracle |
+| LLM/agent orchestration | crowded but algorithmically open | 缺同动作空间、强基线、可证伪机制 | probe-validated SecAgg+ group coordination | LLM vs bandit/rule/oracle |
 | Adaptive weighting/fairness | covered central component | 强方法常依赖客户端级信号 | aggregate-blind adaptive control | 协议资格表 + 隐私兼容主表 |
 | Concept drift | crowded but open | 检测/优化已有，安全协同不足 | 公共漂移任务 + 私有本地干预 | Flash 与 distributed drift 对照 |
 | Federated time series | benchmark gap narrowing | 已有 Fed-TREND 与 Beijing benchmark | 跨城市封存确认与成本/公平协议 | KDD Fresh Air + manifest/hash |
-| Selective collaboration | deployment/privacy gap | 相关性加权与 SecAgg 可见性冲突 | 不暴露身份的群组黑板协调 | 隐私边界审计与负迁移场景 |
+| Selective collaboration | deployment/privacy gap | 相关性加权与 SecAgg 可见性冲突 | 不暴露身份的 SecAgg+ 群组协调 | 隐私边界审计与负迁移场景 |
 
 ## Citation And Positioning Cautions
 

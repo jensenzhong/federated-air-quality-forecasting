@@ -50,7 +50,7 @@ Date: 2026-08-18
 
 ## Handoff
 
-- Idea optimization: focus on aggregate-blind secure blackboard coordination, not dynamic lr/epoch；
+- Idea optimization: focus on aggregate-blind SecAgg+ group coordination, not dynamic lr/epoch；
 - Experiment design: use the A/B/C qualification matrix in `docs/12_goal_driven_mas_fl_roadmap.md`；
 - Development: implement the public directive contract before running P2；
 - Review: treat any missing A-level baseline or hidden privacy weakening as a major evidence defect。

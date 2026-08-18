@@ -2,6 +2,8 @@
 
 状态：`approved_for_validation_only_execution`
 
+说明：本文件记录的是早期参数筛选，不是 v2 主实验对比表。当前方法名称和比较分组以 [`docs/14_experiment_comparison_map.md`](14_experiment_comparison_map.md) 为准；筛选阶段的 `fedprox`/`fedadam` 非安全实现不能直接替代 v2 的 `pafa_fedprox`/`pafa_fedadam`。
+
 ## Mode
 
 设计阶段；本文件只固定筛选预算、比较规则和证据要求，不生成或推断模型性能结果。
@@ -15,7 +17,7 @@
 | Claim | Reviewer question | Screening evidence | Dataset/split | Baselines | Metric | Status |
 |---|---|---|---|---|---|---|
 | 固定模型/超参数可在联邦任务上稳定训练 | 参数选择是否由验证集预注册规则产生？ | 4 个集中式 GRU 配置 + 3 个 FedProx + 3 个 QFedAvg + 3 个 FedAdam | 12 站训练/验证；禁止 test | Persistence/Seasonal Naive 作为外部 sanity baseline；固定联邦家族内部比较 | `macro_mae`，tie-break `worst_station_mae` → `station_mae_cv` → `elapsed_seconds` | completed_nonformal |
-| 联邦比较保持公平 | 是否改变了客户端数、轮数或本地预算？ | 每个联邦筛选任务 12/12 客户端、固定顺序、3 轮、local epoch=1、seed=42 | 验证集 | FedAvg/FedProx/QFedAvg/FedAdam | macro MAE、worst-station MAE、station MAE CV、字节量、耗时 | completed_nonformal |
+| 联邦筛选保持公平 | 是否改变了客户端数、轮数或本地预算？ | 每个联邦筛选任务 12/12 客户端、固定顺序、3 轮、local epoch=1、seed=42 | 验证集 | 平均聚合/稳定本地训练/公平性加权聚合/自适应服务器更新 | macro MAE、worst-station MAE、station MAE CV、字节量、耗时 | completed_nonformal |
 | 低内存实现不改变 Flower 语义 | 顺序调度是否只是工程参数？ | W1/W2 已通过；筛选只调用真实 ClientApp/Strict Strategy | 合成等价门禁 + 真实验证集 | 参考 Grid 与 SequentialGrid | 数组/指标差异、partition 完整性 | passed |
 
 ## Fixed screening budget

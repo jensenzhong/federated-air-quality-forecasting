@@ -19,7 +19,7 @@ FEDERATED_METHODS = {
     "fedavg", "fedprox", "qfedavg", "fedadam", "rule_mas", "mas_llm",
     "mas_llm_dynamic_only", "mas_llm_no_fairness", "fedprox_budget_matched",
     "pafa_rule", "pafa_bandit", "pafa_bandit_fedadam", "pafa_probe_oracle", "pafa_llm", "pafa_llm_no_probe",
-    "pafa_fedprox_budget_matched",
+    "pafa_fedavg", "pafa_fedprox", "pafa_fedadam", "pafa_fedprox_budget_matched",
 }
 DETERMINISTIC_METHODS = {"persistence", "seasonal_naive"}
 

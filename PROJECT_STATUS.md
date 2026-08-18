@@ -2,6 +2,10 @@
 
 最后更新：2026-08-18（Asia/Shanghai）
 
+本次文档更新将当前研究档案切换为 `cloud_llm_exploratory`：12 个逻辑客户端保留各自数据并本地训练，客户端 Agent 真实调用公网 DeepSeek，服务器继续执行 Flower 联邦聚合和 SecAgg+；该档案用于验证 LLM-MAS 可行性，不作严格隐私声明。严格本地/机构内模型部署保留为后续 `strict_private_deployment`。运行合同见 `docs/15_cloud_llm_exploratory_protocol.md`。
+
+`pafa_*` 继续作为内部运行 ID，论文显示名和比较组不再混用。实验阅读顺序固定为：传统联邦主表 → 控制器公平对比 → 机制消融 → 持续学习独立表。
+
 | 里程碑 | 状态 | 已有证据 | 剩余门禁 |
 |---|---|---|---|
 | M0 安全归档 | 部分完成 | 85 文件归档总清单；9 文件删除清单；扫描 0 命中 | 用户在服务商控制台撤销旧密钥 |
@@ -10,13 +14,13 @@
 | M3 模型完成 | v1 已审计；v2 重设计 | v1 的 13/13 screening、7 个 30 轮确认及 seed42 test 已保留；量化确认 LLM-MAS 9.6702 未优于预算匹配 FedProx 9.4665，且动作发生塌缩 | 按 `docs/10_llm_mas_v2_research_redesign.md` 实现并通过 P0--P2 |
 | M4 Flower 完成 | 门禁通过 | ServerApp/ClientApp；固定策略；等价门禁 4 案例通过；12 站 FedProx 3 轮真实 ClientApp 基准完成（328.94 秒、峰值 RSS 0.392GB、最低可用内存 1.329GB）；13 项 screening 全部顺序完成 | 保持低内存顺序执行；后续 30 轮确认与正式队列继续记录峰值内存 |
 | M5 MAS 完成 | P1 nonformal smoke 通过 | 动作、探针、执行、记忆已下沉 ClientApp；旧服务器逐客户端策略永久 fail-closed；Flower SecAgg+ 3 客户端与 12 客户端四阶段合成闭环通过；严格全客户端、缺失回复 fail-closed、会话重放/乱序、消息身份、数值容量、量化误差和聚合裁剪指示门禁已通过；真实 12 站 pafa_rule 1/3 轮 smoke 均 12/12、0 failures；真实 12 站、11-task、12-round continual smoke 已完成并产生非零 AF/AP/AvgPerf（证据见 `docs/continual_secagg_smoke_20260818.md`） | 该 smoke 不具备机构隔离资格；安全 test 评估、机构隔离和机构签名的 node->physical-station 绑定仍阻塞 |
-| M6 正式实验 | 暂停 | 已完成 PAFA FedProx/FedAdam/Bandit/Rule 各 10 轮验证集开发运行；修复后 FedAdam 最佳 macro MAE=10.2817，Bandit=10.5097，Rule=10.7087；预算匹配与最强隐私兼容基线合同已冻结，详细记录见 `docs/p2_secure_baseline_screening_20260818.md` 和 `docs/13_v2_reproducibility_contract.md` | 当前尚未达到 active goal 的“相对最强基线至少改善1%且配对CI不跨0”门槛；正式 test、多 seed、机构隔离和新封存确认集仍受门禁；本地 LLM endpoint 未监听 |
+| M6 云端 LLM 可行性实验 | 待启动 | 已完成 PAFA FedProx/FedAdam/Bandit/Rule 验证集开发运行；真实 ClientApp/SecAgg+ LLM stub smoke 已通过；云端探索合同见 `docs/15_cloud_llm_exploratory_protocol.md` | 需要设置 `DEEPSEEK_API_KEY`，把客户端 endpoint 切换到公网 DeepSeek，先完成 12 站 3 轮 validation；结果标记为 nonformal/cloud-LLM exploratory |
 | M7 论文证据包 | 未开始 | 报告和统计生成模块 | 只使用 validated 运行生成表图与结论 |
 
 ## 当前最高优先级
 
 - 项目已从 `protocol_v1 frozen/test` 转入 `protocol_v2 draft`。旧结果不删除、不改写，但不再驱动正式主张。
-- v2 创新定义为“诊断—候选—局部反事实探针—安全执行—后验信用”加上 `CohortDirective` 安全黑板反馈的可验证智能体控制闭环，而非 LLM 动态调参。C1 已实现：directive 只含固定无身份字段，并严格绑定上一轮聚合结果；rule、bandit、LLM proposer 均消费相同 directive。
+- v2 创新定义为“诊断—候选—局部反事实探针—安全执行—后验信用”加上 `CohortDirective` 安全聚合群组协调反馈的可验证智能体控制闭环，而非 LLM 动态调参。C1 已实现：directive 只含固定无身份字段，并严格绑定上一轮聚合结果；rule、bandit、LLM proposer 均消费相同 directive。
 - 已加入 `aqfl/evaluation/continual.py`，按 benchmark 论文定义 AF/AP/AvgPerf，并提供固定长度任务矩阵的安全聚合 codec；`aqfl/data/continual_dataset.py` 已把冻结的 T0/base-test/T1--T11 时间窗接到客户端本地 cache 索引和 80/20 任务切分，ClientApp 已在显式 `continual-enabled` 请求下选择当前任务本地训练窗口，并在客户端边界维护本地下三角 ledger；SecAgg+ 已接入固定长度归一化任务矩阵数组，未观测上三角按 supplied benchmark 约定在本地编码为零，服务器仅在最终任务解码聚合指标。真实 12 站 continual smoke 已完成，但仍属于 nonformal validation。
 - 已审计用户提供的 benchmark notebook；精确 base/base-test/11-task 边界已冻结到 `aqfl/data/continual_schedule.py`，但 notebook 本身不是可直接导入的安全运行时，且当前尚未运行其任务实验。
 - 新确认集首选 KDD Cup 2018 Fresh Air 北京+伦敦多站点数据；必须先冻结 manifest/切分哈希，再产生任何确认结果。
@@ -34,7 +38,7 @@
 - 受控 hybrid `pafa_bandit_fedadam-42-20260818T025932Z-90200bf` 已完成 3 轮 smoke，best macro MAE=12.4955；早期大量 `adapt_fast` 与服务器动量叠加后劣于静态 FedAdam，已停止其 10 轮扩展并登记为 rejected development candidate。
 - 探针预算匹配 FedProx 控制已完成 10 轮：`pafa_fedprox_budget_matched-42-20260818T031349Z-323da88`，best macro MAE=10.5280、高污染 MAE=29.6761、probe fraction=1.0。Bandit 相对该控制仅改善约0.17% macro MAE且高污染指标更差，未达到预注册的1%门槛。
 - `pafa_probe_oracle-42-20260818T033649Z-37754fb` 10 轮机制上界 smoke 已完成：best macro MAE=10.5626、高污染 MAE=29.3184；它仍未超过 FedAdam 的平均 MAE，但取得当前最佳尾部指标，支持把 v2 结论转向风险敏感/公平性收益。
-- `pafa_llm` 已通过静态隐私 preflight，但配置的 loopback `127.0.0.1:11434` 当前未监听；按政策未启动任何客户端级 LLM 请求，也未退回公网 DeepSeek。
+- `pafa_llm` 已通过本地 stub 的 ClientApp/SecAgg+ transport smoke；当前运行档案已切换为 `cloud_llm_exploratory`，下一步允许真实公网 DeepSeek 客户端请求，但必须记录云端模式标签，不能写成严格隐私结果。
 - `pafa_llm-42-20260818T040611Z-c8e2db6` 已用 development-only localhost OpenAI-compatible stub 完成 1 轮真实 ClientApp/SecAgg+ smoke：12/12、0 failures、`source_rate_llm=1.0`、directive compliance=1.0；该工件只证明本地传输与 proposer 闭环，不是 LLM 性能结果。此前 `040320Z` 工件因 HTTP proxy 误拦 localhost 返回 502，已排除。
 - Windows 原生 Ray 后端启动 object store 超时；该路径已放弃，不阻塞顺序运行时主线。
 - 严格 LLM-MAS 已用当前 `DEEPSEEK_API_KEY` 完成 30 轮验证；密钥不写入仓库，后续重跑仍需在运行环境显式提供。

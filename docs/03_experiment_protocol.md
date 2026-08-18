@@ -4,7 +4,7 @@
 
 v2 方法、门槛和评测设计见 `docs/10_llm_mas_v2_research_redesign.md`。在 v2 P2 通过并重新冻结前，暂停原 seeds 123/456/789/2024 正式队列。
 
-v2 已通过 3 客户端 Flower SecAgg+ 合成工程闭环，并完成真实 12 站 pafa_rule 1/3 轮以及 11-task/12-round continual nonformal smoke（`protocol_frozen=false/evaluation_split=val`，每轮 12/12、0 failures）；这些 smoke 仅证明 ClientApp/SecAgg+ 工程闭环，不是正式隐私或性能证据。安全聚合 test 指标协议与机构隔离 ClientApp 未验证前，test 和正式运行均 fail-closed。v2 主要比较冻结为同 SecAgg+、站点等权和总 probe/local-epoch 预算下的 `pafa_llm` 对最强隐私兼容 FedAdam、同动作空间 `pafa_bandit`/`pafa_rule` 与 `pafa_fedprox_budget_matched`，不沿用 v1 的不等价控制组。
+v2 已通过 3 客户端 Flower Secure Aggregation（安全聚合）合成工程闭环，并完成真实 12 站 pafa_rule 1/3 轮以及 11-task/12-round continual nonformal smoke（`protocol_frozen=false/evaluation_split=val`，每轮 12/12、0 failures）；这些 smoke 仅证明客户端与聚合协议工程闭环，不是正式隐私或性能证据。安全聚合 test 指标协议与机构隔离 ClientApp 未验证前，test 和正式运行均 fail-closed。v2 的表 A、表 B、表 C、表 D 分组和显示名以 `docs/14_experiment_comparison_map.md` 为准；不再把联邦优化、控制器和持续学习方法混成一张表。
 
 冻结记录（2026-08-17，Asia/Shanghai）：Git 基线 `8151de3`；`configs/base.yaml` canonical SHA-256 `9f6b55a6b54e80077e3280b2b7c9b6c3b0fc3bec4699773c9cefa24987faaab0`。各运行的 resolved config、环境和数据 manifest 已随工件保存；当前工作区变更仍需在提交时一并归档，不能把 Git 基线单独解释为全部源代码快照。
 
@@ -16,7 +16,7 @@ v2 已通过 3 客户端 Flower SecAgg+ 合成工程闭环，并完成真实 12 
 - 种子：42、123、456、789、2024。
 - 主指标：站点宏平均 MAE。
 - 次指标：微 MAE、RMSE、sMAPE、R²、最差站 MAE、站点 MAE std/CV、高污染 MAE、通信轮/字节、时间、峰值内存、LLM 成本。
-- 主要比较：`pafa_llm` − `pafa_fedadam`（最强隐私兼容传统基线），并以 `pafa_fedprox_budget_matched` 和同动作空间 bandit/rule 作为预算与机制控制。
+- 主要比较：本地大模型控制器（`pafa_llm`）−自适应服务器更新（`pafa_fedadam`）；预算公平和控制器机制分别使用预算匹配的稳定本地训练（`pafa_fedprox_budget_matched`）以及同动作空间的规则控制器/试错控制器（`pafa_rule`/`pafa_bandit`）。
 
 ## 固定执行语义
 
@@ -30,7 +30,7 @@ v2 已通过 3 客户端 Flower SecAgg+ 合成工程闭环，并完成真实 12 
 
 ## 基线与调参预算
 
-确定性基线为 Persistence、Seasonal Naive。学习基线为 Local-only GRU、Centralized GRU、FedAvg、FedProx、QFedAvg、FedAdam、Rule-MAS、MAS-LLM、FedProx-budget-matched。SCAFFOLD、FedDyn、Flash 等强基线在进入主表前必须完成 SecAgg+/本地状态/预算兼容性审计；尚未通过审计的方法不得静默替换为不等价实现。
+确定性参考为持久性预测和季节性朴素预测；非联邦参考为单站点本地 GRU 和集中式 GRU；传统联邦参考为平均聚合、稳定本地训练、自适应服务器更新和公平性加权聚合。当前主表使用已通过 Secure Aggregation（安全聚合）协议门禁的运行版本；规则控制器、试错控制器、本地大模型控制器和探针上界控制器只在控制器组比较。SCAFFOLD、FedDyn、FLASH 等强基线在进入主表前必须完成安全聚合/本地状态/预算兼容性审计；尚未通过审计的方法不得静默替换为不等价实现。
 
 只用 seed=42 和验证集：FedProx μ `{0.001,0.01,0.1}`；QFedAvg q `{0.1,1,5}`；FedAdam server_lr `{0.01,0.1,1}`。架构网格见方法规格。所有入选参数在主实验前写入决策日志并冻结。
 
@@ -53,7 +53,7 @@ v2 已通过 3 客户端 Flower SecAgg+ 合成工程闭环，并完成真实 12 
 2. 连续缺失：测试输入以连续 6 小时块遮蔽 10% 时间步。
 3. 漂移：第 16 轮起，对排序索引 0/3/6/9 站点污染物输入乘 1.10，并在对应测试输入保持。
 
-先单种子检查，再对 FedProx、Rule-MAS、MAS-LLM 跑 3 种子。压力强度不得由测试结果调整。注意：掉线场景是单独鲁棒性协议，主实验的 12 客户端严格门禁不适用于该场景，但必须验证预期 9 客户端和固定掉线轨迹。
+先单种子检查，再对表 A 和表 B 的固定方法跑 3 种子。压力强度不得由测试结果调整。注意：掉线场景是单独鲁棒性协议，主实验的 12 客户端严格门禁不适用于该场景，但必须验证预期 9 客户端和固定掉线轨迹。
 
 ## 统计计划
 

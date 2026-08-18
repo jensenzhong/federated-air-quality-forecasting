@@ -16,30 +16,36 @@ methods:
   - seasonal_naive
   - local_gru
   - centralized_gru
-  - fedavg
-  - fedprox
-  - qfedavg
-  - fedadam
-  - rule_mas
-  - mas_llm
-  - fedprox_budget_matched
+  - pafa_fedavg
+  - pafa_fedprox
+  - pafa_fedadam
+  - pafa_fedprox_budget_matched
+  - pafa_rule
+  - pafa_bandit
+  - pafa_llm
+  - pafa_llm_no_probe
+  - pafa_probe_oracle
+comparison_groups:
+  traditional_main: [pafa_fedavg, pafa_fedprox, pafa_fedadam, pafa_llm]
+  controller_fair: [pafa_fedprox_budget_matched, pafa_rule, pafa_bandit, pafa_llm]
+  controller_ablation: [pafa_llm_no_probe, mlp]
+  mechanism_upper_bound: [pafa_probe_oracle]
 robustness:
   - client_dropout_3_of_12
   - missing_blocks_10pct_6h
   - sensor_drift_10pct
-result_status: seed42_test_validated_multiseed_pending
+result_status: v2_confirmation_pending
 protocol:
   data_manifest_sha256: b4f6f89661798c638e72d5c3bf696612eb175e75d93f9fae15750bd9bdec763d
   git_commit: 8151de3
   config_sha256: 9f6b55a6b54e80077e3280b2b7c9b6c3b0fc3bec4699773c9cefa24987faaab0
-  status: frozen_pre_test
-  primary_comparison: mas_llm_vs_fedprox_budget_matched
+  status: v2_draft_pre_confirmation
+  primary_comparison: pafa_llm_vs_pafa_fedadam
   bootstrap_resamples: 10000
   block_hours: 24
-  noninferiority_margin: 0.02
+  noninferiority_margin: 0.005
 ablations:
-  - mas_llm_dynamic_only
-  - mas_llm_no_fairness
+  - pafa_llm_no_probe
   - mlp
 screening:
   rounds: 3

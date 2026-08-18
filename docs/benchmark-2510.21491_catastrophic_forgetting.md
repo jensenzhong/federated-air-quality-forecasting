@@ -35,12 +35,12 @@ The current AQ-MAS-FL model is a GRU PM2.5 one-step predictor, while the paper u
 2. a six-step target/model configuration matching the paper, or an explicit application-specific claim limited to the current PM2.5 task;
 3. equal 500-round base phase, 30-round/task continual phase, one local epoch, five seeds, and equal local-memory/probe budgets;
 4. local task-performance matrices and secure cohort summaries for AF/AP/AvgPerf;
-5. separate reporting of raw-data replay, parameter-only consolidation, and the proposed blackboard-coordinated controller.
+5. separate reporting of raw-data replay, parameter-only consolidation, and the proposed SecAgg+-coordinated controller.
 
 ## Research opportunity used in this project
 
 The paper identifies Replay as the strongest reported method but also notes its memory and privacy cost. The defensible AQ-MAS-FL target is therefore not “LLM beats a reported number”; it is:
 
-> under the same continual task schedule and local compute/memory budget, use private parameter consolidation plus SecAgg+ blackboard coordination to approach or exceed Replay-level retention without transmitting raw samples, and verify whether the LLM proposer adds value over the same-action-space bandit.
+> under the same continual task schedule and local compute/memory budget, use private parameter consolidation plus SecAgg+ group coordination to approach or exceed Replay-level retention without transmitting raw samples, and verify whether the LLM proposer adds value over the same-action-space bandit.
 
 Until the adapter and frozen manifests exist, all benchmark-comparison results remain `TBD`.

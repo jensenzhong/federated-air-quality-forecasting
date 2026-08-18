@@ -1,6 +1,15 @@
 # LLM-MAS v2 创新性重审与方法设计
 
-状态：`protocol_v2_implementation`（2026-08-17）。本文件是方法重设计与工程边界依据，不代表实验结论。
+状态：`cloud_llm_exploratory_design`（2026-08-18）。本文件是方法重设计与工程边界依据，不代表实验结论。
+
+## 0. 当前实验档案（重要修订）
+
+本项目现在分为两个执行档案：
+
+1. `cloud_llm_exploratory`：当前论文方法可行性探索。12 个逻辑客户端保留各自站点数据并进行本地训练，客户端 Agent 真实调用公网 DeepSeek；Flower 服务器继续执行联邦轮次、SecAgg+ 和聚合。该档案允许云端看到客户端提示中的派生状态摘要，因此不作严格隐私、机构隔离或差分隐私声明。
+2. `strict_private_deployment`：后续实际部署档案。客户端 Agent 改为本地或机构内模型，保留同一动作、probe、executor、CohortDirective 和 SecAgg+ 接口，再单独完成机构隔离、身份绑定和隐私审计。
+
+当前开发和性能实验使用 `cloud_llm_exploratory`，不再以本地模型部署作为阻断条件。完整运行约束见 `docs/15_cloud_llm_exploratory_protocol.md`。
 
 ## 1. 否定性诊断
 
@@ -13,7 +22,7 @@
 
 因此，v2 不再定义为 policy selector 或高级调参器，而定义为：
 
-> 以联邦学习为主体、由本地站点 LLM 智能体与聚合级协调 LLM 协同的隐私保持联邦优化方法。
+> 以联邦学习为主体、由站点 LLM 智能体与聚合级协调智能体协同的联邦优化方法；当前先验证云端 LLM 的可行性，后续再迁移到严格隐私部署。
 
 暂定名称：**Evidence-Grounded Hierarchical LLM-MAS for Federated Learning**。PAFA 仅表示其中“先本地验证、再执行”的安全子机制，不再作为论文主体。
 
@@ -42,11 +51,11 @@
 - 上轮动作、探针预测收益、实际后验收益；
 - 本轮耗时、客户端 epoch 和通信字节。
 
-本地站点 LLM 智能体读取这些状态并提出动作。原始样本、逐时残差、单客户端状态及提示均不得进入外部 LLM。服务器只接收 SecAgg+ 后的模型和达到最小群组规模的聚合摘要。本项目在未实现 DP 会计前不主张差分隐私。
+本地站点 LLM 智能体读取这些状态并提出动作。在当前 `cloud_llm_exploratory` 档案中，允许将派生状态胶囊发送到公网 DeepSeek 以获得真实 LLM 决策，但原始样本、逐时残差、完整时间戳序列和 test 指标仍不得进入提示；因此当前结果不作严格隐私声明。服务器仍只接收 Secure Aggregation（安全聚合）后的模型和达到最小群组规模的聚合摘要。迁移到 `strict_private_deployment` 后，客户端提示和记忆必须留在本机或机构内。本项目在未实现 DP 会计前不主张差分隐私。
 
 ### 3.2 分层 LLM 多智能体协同
 
-每个客户端的本地 LLM 智能体依据私有状态生成受 Schema 约束的诊断和 2--3 个候选动作。聚合级协调器每轮只依据安全聚合后的群组摘要生成无身份 `CohortDirective`：`phase`、`priority`、`lr_scale_cap`、动作许可掩码和 `directive_round`。该指令在下一轮广播，客户端把它与私有状态结合后重新筛选候选动作；因此公共黑板反馈会实际改变 rule、bandit 和 LLM proposer 的本地动作，而不是只改变一个服务器学习率上限。`directive_round` 必须等于上一轮已完成聚合轮次，过期、重放或跨轮指令 fail-closed。当前实现为确定性、可审计协调器；只有在这一对照稳定后，才允许增加使用相同输入/输出 Schema 的协调 LLM。协调器不接收 client ID、单站点指标或单客户端更新，也不直接输出任意聚合权重。
+每个客户端的 LLM 智能体依据本地状态生成受 Schema 约束的诊断和 2--3 个候选动作。聚合级协调器每轮只依据 Secure Aggregation（安全聚合）产生的群组摘要生成无身份 `CohortDirective`：`phase`、`priority`、`lr_scale_cap`、动作许可掩码和 `directive_round`。该指令在下一轮广播，客户端把它与私有状态结合后重新筛选候选动作；因此群组协调反馈会实际改变 rule、bandit 和 LLM proposer 的本地动作，而不是只改变一个服务器学习率上限。`directive_round` 必须等于上一轮已完成聚合轮次，过期、重放或跨轮指令 fail-closed。当前阶段先用确定性协调器建立可解释对照，再接入只读取群组摘要的云端协调 LLM。协调器不接收 client ID、单站点指标或单客户端更新，也不直接输出任意聚合权重。
 
 首版动作库保持小而可审计：
 
@@ -67,11 +76,11 @@
 
 `utility = -Delta(macro_MAE) - lambda_tail*Delta(CVaR_station) - lambda_cost*cost`
 
-仅当探针收益的保守下界为正时采纳；拒绝时回退到冻结的 FedProx 安全动作。客户端把 `aggregation_gate` 转换为本地更新贡献缩放，形成新的完整模型参数后，再将完整模型参数与固定长度群组统计向量一并交给 SecAgg+。LLM 无法绕过预算、隐私和数值边界。
+仅当探针收益的保守下界为正时采纳；拒绝时回退到冻结的 FedProx 安全动作。客户端把 `aggregation_gate` 转换为本地更新贡献缩放，形成新的完整模型参数后，再将完整模型参数与固定长度群组统计向量一并交给 Secure Aggregation（安全聚合）。LLM 无法绕过预算、隐私和数值边界。
 
 这里的数值语义必须与 Flower 1.22 实现一致：`secaggplus_mod` 先以 `num_examples / max_weight` 对客户端返回的完整模型参数逐数组加权，再将每个坐标裁剪到 `[-clipping_range, clipping_range]`、量化并加掩码。当前 PAFA 固定 `num_examples=max_weight=1`，实现站点等权聚合。该操作不是对本地更新差分做 L2 范数裁剪，文中不得将其写成“更新裁剪”或据此推导 DP 保证。
 
-客户端在进入 SecAgg+ 前检查待发送的完整模型参数是否包含非有限值或可能触发上述逐坐标裁剪。非有限值直接在本地拒绝；裁剪风险只编码为一个布尔指示量并随群组统计向量安全聚合。服务器仅看到 `cohort_clipping_violation_rate`；只要该聚合值表明至少一个客户端可能发生裁剪，本轮就在协调器观察和工件落盘前失效，不释放可用于控制的摘要。
+客户端在进入 Secure Aggregation（安全聚合）前检查待发送的完整模型参数是否包含非有限值或可能触发上述逐坐标裁剪。非有限值直接在本地拒绝；裁剪风险只编码为一个布尔指示量并随群组统计向量安全聚合。服务器仅看到 `cohort_clipping_violation_rate`；只要该聚合值表明至少一个客户端可能发生裁剪，本轮就在协调器观察和工件落盘前失效，不释放可用于控制的摘要。
 
 ### 3.5 跨轮记忆与信用分配
 
@@ -79,7 +88,7 @@
 
 ### 3.6 严格群组与身份边界
 
-当前 PAFA 工程协议采用严格全客户端语义：SecAgg+ 的 setup、share keys、collect masked vectors、unmask 四个阶段都必须对配置中的完整唯一客户端集合各发送一次请求，并从每个成员取得且只取得一次回复。任一缺失、重复、失败或集合不一致都会使该轮 fail-closed。这个选择是当前实验资格门禁，比 SecAgg+ 可支持的掉线恢复语义更严格；不能把它表述成已经验证了容错训练。
+当前 PAFA 工程协议采用严格全客户端语义：Secure Aggregation（安全聚合）的 setup、share keys、collect masked vectors、unmask 四个阶段都必须对配置中的完整唯一客户端集合各发送一次请求，并从每个成员取得且只取得一次回复。任一缺失、重复、失败或集合不一致都会使该轮 fail-closed。这个选择是当前实验资格门禁，比协议可支持的掉线恢复语义更严格；不能把它表述成已经验证了容错训练。
 
 客户端会把每个阶段绑定到 `run_id`、本地 `node_id`、表示服务器轮次的数值 `group_id` 和固定阶段顺序；collect 阶段还绑定 `method` 与 `server-round`。服务器聚合端同时拒绝轮次跳跃/重放和重复或不完整的代理身份。顺序工程 runner 还检查本地 partition 与站点配置是否唯一且完整，但这只是配置一致性检查，不是机构签名的 `Flower node -> physical station` 身份证明。正式跨机构部署在建立并验证该签名绑定前继续阻塞。
 
@@ -147,9 +156,9 @@ seed=42 原 test 已被读取且影响本次方法设计，因此仅能标为 `d
 
 1. `completed`：v2 类型、动作库、探针、预算会计、安全执行器和本地记忆。
 2. `completed`：rule、contextual bandit、probe oracle 与本地 LLM proposer 共用同一动作空间。
-3. `completed_engineering`：Flower 官方 SecAgg+ 四阶段合成集成测试；客户端回复清洗；群组统计向量与聚合级协调器。
+3. `completed_engineering`：Flower 官方 Secure Aggregation（安全聚合）四阶段合成集成测试；客户端回复清洗；群组统计向量与聚合级协调器。
 4. `completed_engineering`：四阶段严格全客户端、缺失/重复、会话重放/乱序、消息身份与轮次绑定、数值容量和聚合裁剪指示门禁，以及 12 客户端合成量化误差回归，已通过 2026-08-18 全量验证；新增 `CohortDirective` 轮次绑定、三类 proposer 消费和离线本地 LLM 解析测试（当前定向测试 `26 passed`）。
-5. `pending`：运行 12 站 1--3 轮 P1 同进程隐私 smoke，并验证 directive 在真实 ClientApp 下一轮改变动作；该 smoke 仍是 nonformal 工程证据。
-6. `blocked`：安全聚合的 test 指标评估、机构隔离部署以及机构签名的 `node -> physical station` 绑定未完成前，不运行正式 test 或多 seed。
+5. `active_next`：切换到 `cloud_llm_exploratory`，用公网 DeepSeek 运行 12 站 3 轮 validation，验证真实客户端 Agent、调用审计、directive 消费和基线可比性；该结果标记为 nonformal exploratory。
+6. `deferred`：严格隐私 test 指标评估、机构隔离部署以及机构签名的 `node -> physical station` 绑定属于后续 `strict_private_deployment`，不再阻断当前云端可行性实验。
 
 这一路线的目标不是保证 LLM 一定获胜，而是让“LLM 是否提供了传统控制器没有的增量价值”成为可以被严格检验的问题。

@@ -1,12 +1,14 @@
 # Goal 模式：隐私保持多智能体协同联邦学习研究路线
 
-状态：`research_goal_active`（2026-08-18）。本文件定义研究目标、胜出条件、方法机制、强基线、开发门禁和失败转向。它不代表已经获得性能提升。
+状态：`cloud_llm_exploratory_goal_active`（2026-08-18）。本文件定义研究目标、胜出条件、方法机制、强基线、开发门禁和失败转向。当前性能探索允许公网 DeepSeek；严格隐私部署是后续迁移档案。它不代表已经获得性能提升。
 
 ## 1. 目标与完成定义
 
-项目目标不是“实现一个带 LLM 的联邦系统”，而是：
+当前阶段目标不是“先完成本地大模型部署”，而是：
 
-> 在原始数据、单客户端状态和单客户端更新均不离开机构，服务器只能观察 SecAgg+ 聚合结果的条件下，构建可验证的多智能体协同控制机制；在相同模型、数据、通信轮数、总本地优化步数和调参预算下，其封存确认集 station-macro MAE 必须显著优于最强隐私兼容传统/非 LLM 基线，同时不恶化尾部站点公平性。
+> 在 12 个逻辑客户端各自保留站点数据、进行本地训练并通过联邦服务器聚合的条件下，使用真实公网 DeepSeek 驱动客户端多智能体，验证其在相同模型、数据、通信轮数、总本地优化步数和调参预算下能否改善 station-macro MAE，同时不恶化尾部站点公平性。后续再把同一算法迁移到本地/机构内模型，形成严格隐私部署版本。
+
+当前探索档案允许客户端状态摘要发送给公网 DeepSeek，因此不得声称“客户端级状态未离开机构”。服务器仍不读取原始站点数据，联邦训练、客户端本地更新和 Secure Aggregation（安全聚合）路径保持不变。具体运行合同见 `docs/15_cloud_llm_exploratory_protocol.md`；严格隐私合同见 `docs/13_v2_reproducibility_contract.md`。
 
 “超过”采用以下硬定义：
 
@@ -14,7 +16,7 @@
 2. station-CVaR / worst-station MAE 不得恶化超过 0.5%；
 3. 在新的封存跨城市/未来时间确认集上方向一致，并再次满足显著性要求；
 4. 相对共享相同状态、动作、探针和预算的 contextual bandit，完整 LLM-MAS 仍有可测增益，否则不能把收益归因于 LLM；
-5. 不允许以更多客户端 epoch、更多调参试验、读取 test、暴露客户端级信号或关闭 SecAgg+ 换取提升。
+5. 不允许以更多客户端 epoch、更多调参试验、读取 test、暴露客户端级信号或关闭 Secure Aggregation（安全聚合）换取提升。
 
 无法保证研究结果一定超过基线；Goal 完成只由真实实验是否满足上述条件决定。工程完成、单 seed 更优或某个次要指标更优都不能替代该条件。
 
@@ -23,14 +25,14 @@
 ### 已完成
 
 - 客户端本地 agent、候选动作、局部 probe、安全执行和私有跨轮记忆；
-- Flower 1.22 SecAgg+ 四阶段闭环、聚合摘要、严格完整群组、重放/身份/量化/裁剪门禁；
+- Flower 1.22 Secure Aggregation（安全聚合）四阶段闭环、聚合摘要、严格完整群组、重放/身份/量化/裁剪门禁；
 - 聚合协调器可根据群组摘要生成下一轮 `cohort-lr-scale-cap`；
 - P1 无训练 12 站 preflight；全量工程测试通过。
 
 ### 尚未完成
 
-- C1--C4 已让 coordinator 通过固定无身份 `CohortDirective` 影响下一轮候选动作、动作许可、优先级和学习率上限，并完成冻结 T0/base-test/T1--T11 的客户端本地 cache 适配器、私有下三角 task ledger、显式 ClientApp 当前任务训练选择和最终任务固定长度矩阵 SecAgg 数组；真实 12 站 11-task/12-round continual smoke 已通过，但仍是同进程 nonformal 工程证据，不能替代机构隔离正式运行；
-- `aqfl/federated/baseline_contract.py` 已把 SCAFFOLD、FedDyn、Flash 等强基线登记为 `pending_protocol_audit`；它们尚未在同一 SecAgg+ 协议中实现；
+- C1--C4 已让 coordinator 通过固定无身份 `CohortDirective` 影响下一轮候选动作、动作许可、优先级和学习率上限，并完成冻结 T0/base-test/T1--T11 的客户端本地 cache 适配器、私有下三角 task ledger、显式 ClientApp 当前任务训练选择和最终任务固定长度矩阵安全聚合数组；真实 12 站 11-task/12-round continual smoke 已通过，但仍是同进程 nonformal 工程证据，不能替代机构隔离正式运行；
+- `aqfl/federated/baseline_contract.py` 已把 SCAFFOLD、FedDyn、Flash 等强基线登记为 `pending_protocol_audit`；它们尚未在同一安全聚合协议中实现；
 - FedAWARE、FedAWA、AAggFF、选择性协作等依赖客户端级服务器信号的方法尚未完成协议兼容性判定；
 - station-CVaR、漂移恢复、probe calibration、错误干预率和严格预算账本未全部进入统一报告；
 - 新的未见确认集尚未冻结；旧 seed42 test 已污染，只能作开发审计；
@@ -52,7 +54,7 @@
 
 ### Core insight
 
-把协作对象从“客户端明文状态/更新”改为“安全聚合黑板”：每个站点 agent 在本地提出并验证动作，只把固定长度、去标识化的意图/诊断/收益统计加入 SecAgg+；协调 agent 根据群组黑板生成下一轮公共任务与约束；各站点再把公共任务与本站私有记忆结合。这样形成可回放的间接协同闭环，而不是服务器逐客户端控制。
+把协作对象从“客户端明文状态/更新”改为“安全聚合群组协调”：每个站点 agent 在本地提出并验证动作，只把固定长度、去标识化的意图/诊断/收益统计加入 Secure Aggregation（安全聚合）；协调 agent 根据群组摘要生成下一轮公共任务与约束；各站点再把公共任务与本站私有记忆结合。这样形成可回放的间接协同闭环，而不是服务器逐客户端控制。
 
 ### Contribution type
 
@@ -69,8 +71,8 @@
 2. **Local proposer**：LLM/rule/bandit 在完全相同的状态 Schema 和动作库上提出 2--3 个候选；
 3. **Counterfactual probe**：固定预算 shadow probe 估计候选收益与不确定性；
 4. **Safe executor**：只有保守收益为正且满足公共约束的动作可以执行，否则回退 FedProx；
-5. **Secure blackboard write**：模型参数与固定长度的诊断率、候选率、接受率、probe 质量、尾部风险和成本统计一并进入 SecAgg+；
-6. **Cohort coordinator**：协调 agent 只能读取群组黑板，输出有界公共指令；
+5. **安全聚合群组摘要写入**：模型参数与固定长度的诊断率、候选率、接受率、probe 质量、尾部风险和成本统计一并进入 Secure Aggregation（安全聚合）；
+6. **Cohort coordinator**：协调 agent 只能读取群组摘要，输出有界公共指令；
 7. **Broadcast coordination**：下一轮广播 `phase`、`priority`、动作许可掩码、学习率上限和公共成本上限，不包含站点或 client ID；
 8. **Posterior credit**：本地记录公共指令是否改善实际收益，使后续 agent 学习何时服从、拒绝或回退。
 
@@ -110,18 +112,18 @@ U = predicted_accuracy_gain
 
 假设：
 
-- H1：安全聚合黑板反馈相对无反馈独立 agent 改善宏平均或尾部性能；
+- H1：安全聚合群组协调反馈相对无反馈独立 agent 改善宏平均或尾部性能；
 - H2：LLM proposer 相对同动作空间 bandit/rule 产生更高的 probe 后 realized uplift；
 - H3：probe + safe executor 降低错误干预率，且收益不是额外训练步数造成；
 - H4：完整方法相对最强隐私兼容传统基线在封存确认集达到第 1 节胜出条件。
 
 ## 6. 强基线与协议资格
 
-外部 continual-learning 参照协议已单独登记于 `docs/benchmark-2510.21491_catastrophic_forgetting.md`：Hallak & Kem 的 arXiv:2510.21491 在同一北京 12 站任务上比较 Replay、LwF/KD、Online-EWC、EWC 和 SI。其 LSTM、六步预测、(T_0+11) 季节任务和 AF/AP/AvgPerf 不能与当前 GRU PM2.5 一步预测直接混数；必须先完成 manifest、模型/目标、任务调度和 SecAgg-only 评估适配。论文报告的 Replay 结果作为外部定位，不作为本项目已复现实验结果。
+外部 continual-learning 参照协议已单独登记于 `docs/benchmark-2510.21491_catastrophic_forgetting.md`：Hallak & Kem 的 arXiv:2510.21491 在同一北京 12 站任务上比较 Replay、LwF/KD、Online-EWC、EWC 和 SI。其 LSTM、六步预测、(T_0+11) 季节任务和 AF/AP/AvgPerf 不能与当前 GRU PM2.5 一步预测直接混数；必须先完成 manifest、模型/目标、任务调度和安全聚合-only 评估适配。论文报告的 Replay 结果作为外部定位，不作为本项目已复现实验结果。
 
 ### A 级：必须复现并进入主表
 
-| 类别 | 方法 | 作用 | SecAgg+ 兼容要求 |
+| 类别 | 方法 | 作用 | Secure Aggregation（安全聚合）兼容要求 |
 |---|---|---|---|
 | 基础 | FedAvg、FedProx | 静态聚合与异质正则 | 聚合完整模型/更新 |
 | 服务器自适应 | FedAdam | 强 FedOpt 基线 | 仅使用聚合更新 |
@@ -153,7 +155,7 @@ Agentic-FL 2026 是概念路线图，不是已经证明胜出的算法基线；F
 - 相同总本地优化步数；probe 步数单独计量，并为所有使用 probe 的控制器完全一致；
 - 每个算法 family 获得相同数量的验证调参试验，而不是强制相同超参数；
 - 同时报告通信 payload、墙钟、峰值内存和 LLM 调用成本；
-- 所有 PAFA 主张在 SecAgg+ 下产生；协议不兼容基线单独分组；
+- 所有 PAFA 主张在 Secure Aggregation（安全聚合）下产生；协议不兼容基线单独分组；
 - 不引用不同数据/模型/切分的论文报告数值作为本项目胜负证据。
 
 ## 8. 数据、统计与泛化
@@ -168,7 +170,7 @@ Agentic-FL 2026 是概念路线图，不是已经证明胜出的算法基线；F
 
 必须包含：
 
-1. 无安全聚合黑板反馈；
+1. 无安全聚合群组协调反馈；
 2. 只有学习率 cap 的当前实现；
 3. 完整公共指令；
 4. LLM no-probe；
@@ -190,7 +192,7 @@ Agentic-FL 2026 是概念路线图，不是已经证明胜出的算法基线；F
 ### G1：协同机制工程门禁
 
 - 实现公共指令 Schema、严格 round 绑定、客户端消费和本地信用记录；
-- 测试证明改变黑板输入会改变下一轮动作，但不泄漏 client/station 标识；
+- 测试证明改变群组摘要输入会改变下一轮动作，但不泄漏 client/station 标识；
 - 12 站 1 轮、再 3 轮 P1 nonformal smoke 完整通过。
 
 ### G2：强基线资格门禁
@@ -225,21 +227,38 @@ Agentic-FL 2026 是概念路线图，不是已经证明胜出的算法基线；F
 | macro 非劣、CVaR 明显改善 | 公平价值成立，精度胜出未完成 | 转公平/风险敏感 FL 主张 |
 | 只靠额外 probe/epoch 提升 | 中心机制失败 | 删除 LLM 增益主张，重做预算控制 |
 | 只在北京数据有效 | 泛化不足 | 限定环境应用论文或增加跨域数据 |
-| 黑板反馈无增益 | 协同机制未成立 | 回到独立本地控制器，停止使用“协同 MAS”表述 |
+| 群组协调反馈无增益 | 协同机制未成立 | 回到独立本地控制器，停止使用“协同 MAS”表述 |
 | 所有控制器均不优于强基线 | 当前方向未达到 Goal | 保留安全系统贡献，另立研究问题，不继续堆 prompt |
 
 ## 12. 开发任务队列
 
 1. `C1`：`completed`，定义 `CohortDirective` 与固定广播 Schema；
 2. `C2`：`completed`，让 rule/bandit/LLM proposer 同等消费公共指令；
-3. `C3`：`completed_engineering`，扩展安全黑板的 probe calibration、tail/conflict/成本统计；
-4. `C4`：`completed_nonformal`，directive round/replay/privacy 回归、冻结的 (T_0+11) 任务调度、客户端本地 ledger 和 continual AF/AP/AvgPerf SecAgg+ 固定数组均已接入并通过 12 站 smoke；
+3. `C3`：`completed_engineering`，扩展安全聚合群组协调的 probe calibration、tail/conflict/成本统计；
+4. `C4`：`completed_nonformal`，directive round/replay/privacy 回归、冻结的 (T_0+11) 任务调度、客户端本地 ledger 和 continual AF/AP/AvgPerf 安全聚合固定数组均已接入并通过 12 站 smoke；
 5. `C5`：`passed_nonformal`，真实 12 站 pafa_rule 1/3 轮 smoke 通过；
 6. `B1`：实现 SCAFFOLD、FedDyn；
-7. `B2`：实现/审计 Flash、q-FedAvg SecAgg 路径；
+7. `B2`：实现/审计 Flash、q-FedAvg 安全聚合路径；
 8. `B3`：完成 AAggFF、FedAWARE、FedAWA、Fed-TREND 资格判定；
 9. `E1`：实现 CVaR、漂移恢复、probe 质量和预算账本；
 10. `D1`：冻结 KDD Fresh Air manifest 与确认切分；
 11. `X1`：按 G3--G5 执行实验，不越级运行正式 test。
 
-当前下一项是 `G2`：冻结强隐私兼容基线、预算公平合同和统计门槛；在机构隔离与封存确认集可用前，继续禁止正式 test 和多 seed 主实验。
+当前下一项是 `C0/C1`：启用 `cloud_llm_exploratory`，把客户端 LLM endpoint 指向公网 DeepSeek，完成真实 12 站 3 轮 validation，并与 FedAdam、预算匹配 FedProx、rule、bandit 对照。严格隐私机构隔离、正式 test 和多 seed 属于后续 `strict_private_deployment`，不再阻断当前云端可行性实验。
+
+## 13. 执行档案修订（2026-08-18）
+
+### 当前：`cloud_llm_exploratory`
+
+- 12 个客户端逻辑隔离数据和本地训练；
+- 客户端 Agent 真实调用公网 DeepSeek，使用派生状态胶囊，不发送原始行、逐样本序列或 test 指标；
+- 服务器继续执行 Flower 联邦轮次和 Secure Aggregation（安全聚合）；
+- 结果标签为 `nonformal/cloud-LLM exploratory`，用于判断 LLM-MAS 机制可行性；
+- 不作严格隐私、机构隔离或 DP 声明。
+
+### 后续：`strict_private_deployment`
+
+- 客户端 Agent endpoint 替换为客户端本地或机构内模型；
+- 保持动作库、probe、safe executor、CohortDirective 和 Secure Aggregation（安全聚合）接口不变；
+- 补做机构隔离、身份绑定、正式 test 评估和 DP 会计（如需 DP 主张）；
+- 只有该档案完成后，才进入严格隐私部署叙事。
