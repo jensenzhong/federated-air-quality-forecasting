@@ -10,7 +10,7 @@
 | M3 模型完成 | v1 已审计；v2 重设计 | v1 的 13/13 screening、7 个 30 轮确认及 seed42 test 已保留；量化确认 LLM-MAS 9.6702 未优于预算匹配 FedProx 9.4665，且动作发生塌缩 | 按 `docs/10_llm_mas_v2_research_redesign.md` 实现并通过 P0--P2 |
 | M4 Flower 完成 | 门禁通过 | ServerApp/ClientApp；固定策略；等价门禁 4 案例通过；12 站 FedProx 3 轮真实 ClientApp 基准完成（328.94 秒、峰值 RSS 0.392GB、最低可用内存 1.329GB）；13 项 screening 全部顺序完成 | 保持低内存顺序执行；后续 30 轮确认与正式队列继续记录峰值内存 |
 | M5 MAS 完成 | P1 nonformal smoke 通过 | 动作、探针、执行、记忆已下沉 ClientApp；旧服务器逐客户端策略永久 fail-closed；Flower SecAgg+ 3 客户端与 12 客户端四阶段合成闭环通过；严格全客户端、缺失回复 fail-closed、会话重放/乱序、消息身份、数值容量、量化误差和聚合裁剪指示门禁已通过全量验证；真实 12 站 pafa_rule 1 轮和 3 轮同进程 smoke 均 12/12、0 failures，round 3 已产生 volatile/tail_recovery 指令；12 站 continual 12 轮 preflight 仍为 `training_started=false` | 该 smoke 不具备机构隔离资格；安全 test 评估、机构隔离和机构签名的 node->physical-station 绑定仍阻塞 |
-| M6 正式实验 | 暂停 | seed42 v1 test 结果完整保留，但因已用于 v2 设计，只能作为 v2 的开发审计证据 | v2 P2 通过后冻结；建立新的未见确认集后才恢复多 seed |
+| M6 正式实验 | 暂停 | seed42 v1 test 结果完整保留，但因已用于 v2 设计，只能作为 v2 的开发审计证据；P1 nonformal smoke 已通过 | 先完成强基线/预算合同与同动作空间对照，再做 v2 P2；建立新的未见确认集后才恢复多 seed |
 | M7 论文证据包 | 未开始 | 报告和统计生成模块 | 只使用 validated 运行生成表图与结论 |
 
 ## 当前最高优先级

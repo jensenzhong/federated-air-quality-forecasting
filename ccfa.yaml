@@ -40,7 +40,7 @@ experiments:
     continual_source_audit: docs/benchmark-source-audit-2510.21491.md
     continual_schedule: aqfl/data/continual_schedule.py
     old_seed42_test_role: development_audit_only
-    next_gate: P1_twelve_station_privacy_smoke
+    next_gate: G2_strong_baseline_and_budget_contract
     secagg_synthetic_test: passed_three_client_four_stage
     secagg_quantization_test: passed_twelve_client_four_stage_hard_error_bound
     strict_cohort_drop_test: passed_collect_stage_fail_closed
