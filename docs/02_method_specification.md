@@ -32,9 +32,9 @@
 
 ## 多智能体协议
 
-v1 的服务器端 `RulePlanningAgent/LLMPlanningAgent` 仅保留为历史基线。v2 中，每个 `StationAgent` 在 ClientApp 本地维护状态胶囊、动作记忆和信用，调用本地/机构 LLM 生成候选，并在本地完成 shadow probe 与安全执行。服务器端 `AggregateCoordinatorAgent` 只读取 SecAgg+ 解密后的群组向量，广播公共阶段与学习率上限。
+v1 的服务器端 `RulePlanningAgent/LLMPlanningAgent` 仅保留为历史基线。v2 中，每个 `StationAgent` 在 ClientApp 本地维护状态胶囊、动作记忆和信用，调用本地/机构内 LLM 生成候选，并在本地完成 shadow probe 与安全执行。服务器端 `AggregateCoordinatorAgent` 只读取 Secure Aggregation（安全聚合）解密后的群组向量，广播公共阶段与学习率上限。
 
-v2 的模型参数和群组统计向量经过同一次 Flower SecAgg+ 聚合。明文 `num_examples` 固定为 1，因此主聚合是站点等权宏平均；`aggregation_gate` 通过客户端本地缩放 `local-global` 更新实现，服务器不计算或查看单客户端权重。与 v2 对比的 FedProx 必须另建同为站点等权、预算匹配且使用 SecAgg+ 的控制组。
+v2 的模型参数和群组统计向量经过同一次 Secure Aggregation（安全聚合）处理。明文 `num_examples` 固定为 1，因此主聚合是站点等权宏平均；`aggregation_gate` 通过客户端本地缩放 `local-global` 更新实现，服务器不计算或查看单客户端权重。与 v2 对比的 FedProx 必须另建同为站点等权、预算匹配且使用同一协议的控制组。
 
 规则优先级：公平性阈值→三轮改善不足 0.5%→更新范数 CV>0.5→size_only。若连续两个间隔都恶化，学习率缩放 0.5、epoch=1；三轮改善不足 0.2%且未连续恶化时缩放 1.5、epoch=2；否则 1.0、1。
 
@@ -44,7 +44,7 @@ v2 的模型参数和群组统计向量经过同一次 Flower SecAgg+ 聚合。�
 
 非法响应/API 失败可在非正式运行回退规则；正式 LLM 运行出现任何预期决策点失败即 invalid 并重跑。密钥只从环境变量读取。Prompt、响应、模型、时间、解析状态、哈希和来源进入可审计缓存，不记录密钥。
 
-v2 客户端 LLM 使用 `llm.client_base_url/client_model`，默认回环地址；公网 `llm.base_url` 只能用于 v1 或未来仅含群组摘要的协调器。客户端 prompt、响应和记忆只保存在 ClientApp 私有状态，不进入服务器工件。复用上一轮提案记录为 `source=cache`，不得计作新的 LLM 调用。
+v2 客户端 LLM 使用 `llm.client_base_url/llm.client_model`，默认只能是本机或机构内地址；公网端点不得接收客户端级状态。客户端 prompt、响应和记忆只保存在 ClientApp 私有状态，不进入服务器工件。复用上一轮提案记录为 `source=cache`，不得计作新的 LLM 调用。
 
 ## 计算预算控制
 
