@@ -733,7 +733,7 @@ def run_secure_pafa(
                 rounds_per_task=continual_rounds_per_task,
                 task_count=continual_task_count,
             )
-            next_task_id = (
+            next_task_id: int | None = (
                 continual_task_id_for_round(
                     round_number + 1,
                     base_rounds=continual_base_rounds,
@@ -741,14 +741,18 @@ def run_secure_pafa(
                     task_count=continual_task_count,
                 )
                 if round_number < num_rounds
-                else task_id
+                else None
             )
+            # Checkpoint the private ledger at every task boundary.  The
+            # client emits the fixed matrix payload only when this checkpoint
+            # is for the final task; intermediate rounds keep that slot zero.
+            final_task = task_id > 0 and next_task_id != task_id
             values.update(
                 {
                     "continual-enabled": True,
                     "continual-task-id": task_id,
                     "continual-task-count": continual_task_count,
-                    "continual-task-final": task_id > 0 and next_task_id != task_id,
+                    "continual-task-final": final_task,
                 }
             )
         return values

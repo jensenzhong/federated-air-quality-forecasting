@@ -54,6 +54,29 @@ app = ClientApp(mods=[private_secaggplus_mod])
 LOCAL_CONTINUAL_LEDGER_ARRAY = "__pafa_local_continual_task_ledger__"
 
 
+def _config_bool(value: Any, *, default: bool = False) -> bool:
+    """Decode booleans carried through Flower ConfigRecord safely.
+
+    Flower may transport scalar configuration values as strings.  Using
+    ``bool(value)`` would therefore turn the string ``"False"`` into ``True``
+    and could make a client emit a continual-task matrix on every round.
+    Unknown encodings are rejected so a malformed protocol flag fails closed.
+    """
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in {"true", "1", "yes", "on"}:
+            return True
+        if normalized in {"false", "0", "no", "off"}:
+            return False
+    if isinstance(value, int | float) and value in {0, 1}:
+        return bool(value)
+    raise ValueError(f"Invalid boolean configuration value: {value!r}")
+
+
 def _config(context: Context) -> dict[str, Any]:
     return load_config(str(context.run_config.get("config-path", "configs/base.yaml")))
 
@@ -155,7 +178,9 @@ def _continual_task_id(
     train_config: Any,
 ) -> int | None:
     settings = config.get("continual", {})
-    enabled = bool(train_config.get("continual-enabled", settings.get("enabled", False)))
+    enabled = _config_bool(
+        train_config.get("continual-enabled", settings.get("enabled", False))
+    )
     if not enabled:
         return None
     task_id = int(train_config.get("continual-task-id", -1))
@@ -209,7 +234,7 @@ def train(msg: Message, context: Context) -> Message:
     continual_task_count = int(
         train_config.get("continual-task-count", continual_settings.get("task_count", 11))
     )
-    continual_task_final = bool(train_config.get("continual-task-final", False))
+    continual_task_final = _config_bool(train_config.get("continual-task-final", False))
     continual_ledger: LocalContinualTaskLedger | None = None
     if continual_task_id is not None and continual_task_id > 0:
         continual_ledger = _load_local_continual_ledger(context, continual_task_count)
@@ -275,10 +300,10 @@ def train(msg: Message, context: Context) -> Message:
                 round_number,
                 config,
                 private_state,
-                strict_llm=bool(train_config.get("strict-llm", True)),
+                strict_llm=_config_bool(train_config.get("strict-llm", True), default=True),
                 directive=directive,
             )
-        probe_enabled = bool(train_config.get("probe-enabled", True)) and (
+        probe_enabled = _config_bool(train_config.get("probe-enabled", True), default=True) and (
             not static_baseline or budget_matched_baseline
         )
         outcomes: tuple[ProbeOutcome, ...] = ()

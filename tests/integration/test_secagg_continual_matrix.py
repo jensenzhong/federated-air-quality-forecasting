@@ -7,6 +7,7 @@ from flwr.clientapp import ClientApp
 from flwr.common import Code, FitRes, Status, ndarrays_to_parameters
 from flwr.common import recorddict_compat as compat
 
+from aqfl.federated.client_app import _config_bool
 from aqfl.federated.secure_aggregation import (
     ACTION_IDS,
     COHORT_CONTINUAL_TASK_MATRIX_ARRAY,
@@ -38,9 +39,10 @@ def test_secagg_continual_matrix_is_fixed_length_and_decoded_only_at_final_task(
     def train(msg: Message, context: Context) -> Message:
         fit_config = msg.content.config_records["fitins.config"]
         task_id = int(fit_config["continual-task-id"])
+        task_final = _config_bool(fit_config["continual-task-final"])
         matrix = (
             np.zeros(4, dtype=np.float32)
-            if task_id < 2
+            if not (task_final and task_id == 2)
             else np.asarray([0.01, 0.02, 0.03, 0.04], dtype=np.float32)
         )
         fitres = FitRes(

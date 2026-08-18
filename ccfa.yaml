@@ -51,12 +51,23 @@ experiments:
     cohort_directive_privacy_regression: passed_tamper_replay_identity_isolation
     cohort_summary_probe_calibration_fields: implemented
     continual_af_ap_avgperf_codec: implemented_aggregate_only
-    continual_task_schedule: frozen_source_audit_pending_clientapp_adapter
-    clientapp_continual_adapter: partial_local_train_selection
+    continual_task_schedule: passed_frozen_source_audit_and_clientapp_adapter
+    clientapp_continual_adapter: implemented_local_train_selection_and_ledger
     local_continual_cache_adapter: implemented_client_local_only
-    local_task_ledger: implemented_private_matrix
-    continual_task_matrix_secagg: passed_synthetic_final_task_only
-    continual_schedule_preflight: passed_12_rounds_no_training
+    local_task_ledger: implemented_private_lower_triangle_zero_fill
+    continual_task_matrix_secagg: passed_synthetic_and_real_12_station_smoke
+    continual_schedule_preflight: passed_12_rounds_training
+    p1_continual_smoke:
+      status: passed_nonformal
+      run_id: pafa_rule-42-20260818T043910Z-38c6a2f
+      cohort: 12_of_12_each_round
+      rounds: 12
+      task_count: 11
+      evaluation_split: val
+      average_forgetting: -0.7457669576009118
+      average_plasticity: 13.978030464865945
+      average_performance: 13.30006050341057
+      report: docs/continual_secagg_smoke_20260818.md
     p1_one_round_smoke:
       status: passed_nonformal
       run_id: pafa_rule-42-20260818T003708Z-a72a7ca
@@ -70,7 +81,6 @@ experiments:
       failures: 0
       directive_round3: volatile_tail_recovery_lr_cap_0.5
       evaluation_split: val
-    p1_continual_smoke: pending_real_12_station_task_run
     p1_runner_preflight: passed_twelve_station_no_training
     formal_test_status: blocked_until_secure_evaluation_and_isolated_clients
     multiseed_v1: paused

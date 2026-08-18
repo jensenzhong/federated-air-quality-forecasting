@@ -60,5 +60,13 @@ def test_local_task_ledger_is_complete_before_secagg_encoding() -> None:
     assert np.array_equal(ledger.matrix(), np.asarray([[1.0, 2.0], [3.0, 1.5]]))
     restored = LocalContinualTaskLedger.from_private_matrix(ledger.private_matrix())
     assert np.array_equal(restored.matrix(), ledger.matrix())
+    triangular = LocalContinualTaskLedger(task_count=2)
+    triangular.record(1, 1, 1.0)
+    triangular.record(2, 1, 3.0)
+    triangular.record(2, 2, 1.5)
+    assert np.array_equal(
+        triangular.encode_for_secagg(),
+        np.asarray([0.01, 0.0, 0.03, 0.015], dtype=np.float32),
+    )
     with pytest.raises(RuntimeError, match="overwrite"):
         ledger.record(1, 1, 9.0)

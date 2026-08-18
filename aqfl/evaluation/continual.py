@@ -71,18 +71,35 @@ class LocalContinualTaskLedger:
             raise RuntimeError("Continual task metric overwrite rejected")
         self._matrix[row, column] = value
 
-    def matrix(self, *, through_task: int | None = None) -> np.ndarray:
+    def matrix(
+        self,
+        *,
+        through_task: int | None = None,
+        fill_unobserved: bool = False,
+    ) -> np.ndarray:
         last_task = self.task_count if through_task is None else int(through_task)
         if not 1 <= last_task <= self.task_count:
             raise ValueError("Unknown continual task ID")
         values = self._matrix[:last_task, :last_task]
+        observed = np.tril(np.ones(values.shape, dtype=bool))
+        if not np.isfinite(values[observed]).all():
+            raise RuntimeError("Local continual task matrix is incomplete")
+        if fill_unobserved:
+            # The supplied benchmark zero-initializes the unobserved upper
+            # triangle.  Keep those cells local-only until the final task,
+            # then encode the same fixed-size convention behind SecAgg+.
+            completed = values.copy()
+            completed[~observed & ~np.isfinite(completed)] = 0.0
+            return completed
         if not np.isfinite(values).all():
             raise RuntimeError("Local continual task matrix is incomplete")
         return values.copy()
 
     def encode_for_secagg(self) -> np.ndarray:
         """Return only the fixed-size numeric payload suitable for SecAgg+."""
-        return encode_task_matrix(self.matrix() / CONTINUAL_METRIC_SCALE)
+        return encode_task_matrix(
+            self.matrix(fill_unobserved=True) / CONTINUAL_METRIC_SCALE
+        )
 
 
 def _validate_matrix(matrix: np.ndarray) -> np.ndarray:
