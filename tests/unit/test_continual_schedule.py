@@ -9,6 +9,7 @@ from aqfl.data.continual_schedule import (
     benchmark_evaluation_window,
     benchmark_phase_window,
     benchmark_task_schedule,
+    continual_task_id_for_round,
     task_key,
     validate_task_schedule,
 )
@@ -36,3 +37,13 @@ def test_task_schedule_and_keys_fail_closed() -> None:
         task_key(-1, "test")
     with pytest.raises(ValueError, match="Unknown continual task"):
         task_key(12, "test")
+
+
+def test_continual_round_mapping_is_deterministic_and_bounded() -> None:
+    assert [
+        continual_task_id_for_round(round_number)
+        for round_number in range(1, 13)
+    ] == list(range(12))
+    assert continual_task_id_for_round(4, base_rounds=2, rounds_per_task=2) == 1
+    with pytest.raises(ValueError, match="exceeds"):
+        continual_task_id_for_round(13)

@@ -25,6 +25,7 @@ from aqfl.agents.local_runtime import (
 )
 from aqfl.agents.v2_contracts import CohortDirective, ProbeOutcome
 from aqfl.config import load_config, set_seed
+from aqfl.data.continual_dataset import load_station_continual_dataset
 from aqfl.data.dataset import list_stations, load_cache_metadata, load_station_dataset
 from aqfl.data.preprocessing import GlobalScalerState
 from aqfl.federated.probe_runtime import probe_candidates
@@ -121,6 +122,21 @@ def _is_secure_pafa_request(msg: Message, context: Context) -> bool:
     )
 
 
+def _continual_task_id(
+    config: dict[str, Any],
+    train_config: Any,
+) -> int | None:
+    settings = config.get("continual", {})
+    enabled = bool(train_config.get("continual-enabled", settings.get("enabled", False)))
+    if not enabled:
+        return None
+    task_id = int(train_config.get("continual-task-id", -1))
+    task_count = int(train_config.get("continual-task-count", settings.get("task_count", 11)))
+    if task_id < 0 or task_id > task_count or task_count < 1 or task_count > 11:
+        raise RuntimeError("Continual ClientApp request has an invalid task ID")
+    return task_id
+
+
 @app.train()
 def train(msg: Message, context: Context) -> Message:
     config = _config(context)
@@ -138,7 +154,18 @@ def train(msg: Message, context: Context) -> Message:
     incoming = incoming_record.to_torch_state_dict()
     model.load_state_dict(incoming)
     before = copy.deepcopy(model.state_dict())
-    train_dataset = load_station_dataset(config, station, "train")
+    continual_task_id = _continual_task_id(config, train_config)
+    if continual_task_id is None:
+        train_dataset = load_station_dataset(config, station, "train")
+    else:
+        train_ratio = float(config.get("continual", {}).get("train_ratio", 0.8))
+        train_dataset = load_station_continual_dataset(
+            config,
+            station,
+            continual_task_id,
+            "train",
+            train_ratio=train_ratio,
+        )
     val_dataset = load_station_dataset(config, station, "val")
     started = time.perf_counter()
     base_lr = float(train_config.get("base-lr", train_config.get("lr", context.run_config["lr"])))

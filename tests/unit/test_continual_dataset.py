@@ -10,6 +10,7 @@ from aqfl.data.continual_schedule import (
     BENCHMARK_BASE_TEST_START,
     benchmark_phase_window,
 )
+from aqfl.federated.client_app import _continual_task_id
 
 
 def _write_cache(root, timestamps: list[datetime]) -> None:
@@ -70,4 +71,18 @@ def test_adapter_fails_closed_when_local_window_is_missing(tmp_path) -> None:
             "StationA",
             1,
             "train",
+        )
+
+
+def test_clientapp_continual_task_request_is_explicit_and_bounded() -> None:
+    config = {"continual": {"enabled": False, "task_count": 11}}
+    assert _continual_task_id(config, {"continual-enabled": False}) is None
+    assert _continual_task_id(
+        config,
+        {"continual-enabled": True, "continual-task-id": 3, "continual-task-count": 11},
+    ) == 3
+    with pytest.raises(RuntimeError, match="invalid task ID"):
+        _continual_task_id(
+            config,
+            {"continual-enabled": True, "continual-task-id": 12, "continual-task-count": 11},
         )

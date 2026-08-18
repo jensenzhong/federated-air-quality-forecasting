@@ -52,7 +52,7 @@ experiments:
     cohort_summary_probe_calibration_fields: implemented
     continual_af_ap_avgperf_codec: implemented_aggregate_only
     continual_task_schedule: frozen_source_audit_pending_clientapp_adapter
-    clientapp_continual_adapter: pending
+    clientapp_continual_adapter: partial_local_train_selection
     local_continual_cache_adapter: implemented_client_local_only
     local_task_ledger: implemented_private_matrix
     p1_continual_smoke: blocked_until_clientapp_adapter

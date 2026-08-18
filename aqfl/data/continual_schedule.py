@@ -80,6 +80,32 @@ def benchmark_evaluation_window(task_id: int) -> tuple[datetime, datetime]:
     return benchmark_phase_window(task_id)
 
 
+def continual_task_id_for_round(
+    round_number: int,
+    *,
+    base_rounds: int = 1,
+    rounds_per_task: int = 1,
+    task_count: int = BENCHMARK_TASK_COUNT,
+) -> int:
+    """Map a continual communication round to T0 or one of T1..TN.
+
+    The mapping is deterministic and public.  It is used only to select local
+    windows; no client identity or private trajectory is encoded in the task ID.
+    """
+    if round_number < 1:
+        raise ValueError("Communication rounds start at one")
+    if base_rounds < 1 or rounds_per_task < 1:
+        raise ValueError("Continual phase lengths must be positive")
+    if task_count < 1 or task_count > BENCHMARK_TASK_COUNT:
+        raise ValueError("Continual task_count is outside the frozen schedule")
+    if round_number <= base_rounds:
+        return 0
+    task_id = (round_number - base_rounds - 1) // rounds_per_task + 1
+    if task_id > task_count:
+        raise ValueError("Round exceeds the configured continual task schedule")
+    return int(task_id)
+
+
 def validate_task_schedule(tasks: tuple[ContinualTaskWindow, ...]) -> None:
     if len(tasks) != 11:
         raise ValueError("The supplied benchmark schedule must contain exactly 11 tasks")
